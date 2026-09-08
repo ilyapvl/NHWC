@@ -11,12 +11,14 @@
 #include <string>
 #include <limits>
 #include <cstddef>
+#include <utility>
 
 template <typename K, typename V>
 class Cache
 {
 protected:
     std::size_t m_capacity;
+    std::unordered_map<K, V> m_values;
 
 public:
     Cache(std::size_t capacity);
@@ -27,7 +29,8 @@ public:
     virtual bool contains(const K key) const = 0;
 
     virtual void extract(const K key) = 0;
-    virtual std::optional<K> insert(const K key) = 0;
+    virtual std::optional<std::pair<K, V>> insert(const K key, const V value) = 0;
+    virtual std::optional<V> get(const K key) const = 0;
 
     //virtual void dump(std::ostream& out) const = 0;
 };

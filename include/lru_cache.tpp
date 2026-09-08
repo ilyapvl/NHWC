@@ -22,31 +22,44 @@ void LRUCache<K, V>::extract(const K key)
 }
 
 template<typename K, typename V>
-std::optional<K> LRUCache<K, V>::insert(const K key)
+std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K key, const V value)
 {
-    if (m_capacity == 0) return key;
-
     auto it = m_positions.find(key);
 
     if (it != m_positions.end())
     {
         m_order.splice(m_order.begin(), m_order, it->second);
+        m_values[key] = value;
         return std::nullopt;
     }
 
-    std::optional<K> element_to_erase;
+    std::optional<std::pair<K,V>> element_to_erase;
 
     if (m_order.size() == m_capacity)
     {
-        element_to_erase = m_order.back();
-        m_positions.erase(*element_to_erase);
+        element_to_erase = std::make_pair(m_order.back(), m_values[m_order.back()]);
+        m_positions.erase(element_to_erase->first);
+        m_values.erase(element_to_erase->first);
         m_order.pop_back();
     }
 
     m_order.push_front(key);
     m_positions.emplace(key, m_order.begin());
+    m_values[key] = value;
 
     return element_to_erase;
+}
+
+template<typename K, typename V>
+std::optional<V> LRUCache<K, V>::get(const K key) const
+{
+    auto it = m_values.find(key);
+    if (it != m_values.end())
+    {
+        return it->second;
+    }
+
+    return std::nullopt;
 }
 
 #endif // LRU_CACHE_TPP

@@ -20,11 +20,14 @@ private:
 public:
     LRUCache(std::size_t capacity);
     using Cache<K, V>::m_capacity;
+    using Cache<K, V>::m_values;
 
     bool contains(const K key) const override;
     void extract(const K key) override;
     
-    std::optional<K> insert(const K key) override;
+    std::optional<V> get(const K key) const override;
+
+    std::optional<std::pair<K, V>> insert(const K key, const V value) override;
 };
 
 #include "lru_cache.tpp"

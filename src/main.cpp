@@ -6,15 +6,10 @@
 #include <sstream>
 #include <string>
 
-template<typename K, typename V>
-void access_and_record_hit(K key, CacheSystem<K, V>& chs, std::vector<int>& hits)
+int slow_get_page(int key)
 {
-    auto hit_level = chs.access(key);
-
-    if (hit_level.has_value())
-    {
-        hits[hit_level.value()]++;
-    }
+    // for (int i = 0; i < 1000000000; i += 2) i--;
+    return key / 2;
 }
 
 int main(const int argc, const char* argv[])
@@ -82,7 +77,7 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    CacheSystem<int, int> chs(std::move(levels));
+    CacheSystem<int, int> chs(std::move(levels), slow_get_page);
 
     std::vector<int> hits(level_count, 0);
 
@@ -90,18 +85,19 @@ int main(const int argc, const char* argv[])
     int key;
     while (config >> key)
     {
-        access_and_record_hit(key, chs, hits);
+        chs.access(key);
     }
 
 
     for (int i = 0; i < level_count; i++)
     {
-        std::cout << "level " << i << " " << algorithms[i] << " has " << hits[i] << " hits\n";
+        std::cout << "level " << i << " " << algorithms[i] 
+        << " size " << capacities[i] << " has " << chs.get_hits(i) << " hits\n";
     }
 
     int total_hits = 0;
 
-    for (int i = 0; i < level_count; i++) total_hits += hits[i];
+    for (int i = 0; i < level_count; i++) total_hits += chs.get_hits(i);
 
     std::cout << "total " << total_hits << " / " << num_requests << std::endl;
 

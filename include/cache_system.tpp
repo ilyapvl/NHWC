@@ -17,44 +17,61 @@ std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, std::size_
 }
 
 template<typename K, typename V>
-CacheSystem<K, V>::CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels)
-    : m_levels(std::move(levels))
+CacheSystem<K, V>::CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels, std::function<V(const K&)> slow_get_page)
+    : m_levels(std::move(levels)),
+      m_slow_get_page(std::move(slow_get_page)),
+      m_hits(m_levels.size(), 0)
 {
 }
 
 template<typename K, typename V>
-std::optional<std::size_t> CacheSystem<K, V>::access(const K key)
+V CacheSystem<K, V>::access(const K key)
 {
-    std::optional<std::size_t> hit_level;
-
     for (std::size_t i = 0; i < m_levels.size(); i++)
     {
         if (m_levels[i]->contains(key))
         {
-            hit_level = i;
-            break;
+            std::optional<V> maybe_value = m_levels[i]->get(key);
+            if (!maybe_value.has_value()) continue;
+
+            V value = maybe_value.value();
+
+
+            if (i > 0)
+            {
+                m_levels[i]->extract(key);
+            }
+            else
+            {
+                m_levels[0]->insert(key, value);
+            }
+
+
+            std::optional<std::pair<K, V>> moving = std::make_pair(key, value);
+            for (std::size_t j = 0; j < m_levels.size() && moving.has_value(); j++)
+            {
+                moving = m_levels[j]->insert(moving->first, moving->second);
+            }
+
+
+            m_hits[i]++;
+            return value;
         }
+
+
     }
 
-    if (hit_level.has_value())
+    V value = m_slow_get_page(key);
+
+
+    std::optional<std::pair<K, V>> moving = std::make_pair(key, value);
+    for (size_t j = 0; j < m_levels.size() && moving.has_value(); j++)
     {
-        if (*hit_level == 0)
-        {
-            m_levels[*hit_level]->insert(key);
-            return hit_level;
-        }
-
-        m_levels[*hit_level]->extract(key);
+        moving = m_levels[j]->insert(moving->first, moving->second);
     }
 
-    std::optional moving_key = key;
-
-    for (std::size_t i = 0; i < m_levels.size() && moving_key.has_value(); i++)
-    {
-        moving_key = m_levels[i]->insert(*moving_key);
-    }
-
-    return hit_level;
+    return value;
+    
 }
 
 #endif // CACHE_SYSTEM_TPP
