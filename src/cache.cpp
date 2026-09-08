@@ -2,6 +2,7 @@
 #include <optional>
 #include <list>
 #include <unordered_map>
+#include <map>
 #include <cassert>
 #include <memory>
 #include <string>
@@ -25,7 +26,6 @@ public:
     }
 
     virtual bool contains(const K key) const = 0;
-    virtual void key_found_to_front(const K key) = 0;
 
     virtual void extract(const K key) = 0;
     virtual std::optional<K> insert(const K key) = 0;
@@ -53,12 +53,6 @@ public:
         return m_positions.find(key) != m_positions.end();
     }
 
-    void key_found_to_front(const K key) override
-    {
-        const auto old_position = m_positions.at(key);
-        m_order.splice(m_order.begin(), m_order, old_position);
-    }
-
     void extract(const K key) override
     {
         auto it = m_positions.find(key);
@@ -75,11 +69,21 @@ public:
     {
         if (m_capacity == 0) return key;
 
+        auto it = m_positions.find(key);
+
+        if (it != m_positions.end())
+        {
+            m_order.splice(m_order.begin(), m_order, it->second);
+
+            return std::nullopt;
+        }
+
         std::optional<K> element_to_erase;
 
         if (m_order.size() == m_capacity)
         {
             element_to_erase = m_order.back();
+
             m_positions.erase(*element_to_erase);
             m_order.pop_back();
 
@@ -103,10 +107,26 @@ template<typename K, typename V>
 class LFUCache : public Cache<K, V>
 {
 private:
-    std::unordered_map<K, V> m_data;
-    std::unordered_map<K, int> m_freq;
-    std::unordered_map<K, int> m_last_used;
-    int m_counter = 0;
+    std::map<int, std::list<K>> m_freq_to_keys;
+    std::unordered_map<K, std::pair<int, typename std::list<K>::iterator>> m_key_to_pair;
+
+    void increment_frequency(const K key)
+    {
+        auto& [freq, it] = m_key_to_pair[key];
+
+        auto& old_list = m_freq_to_keys[freq];
+        old_list.erase(it);
+
+        if (old_list.empty()) m_freq_to_keys.erase(freq);
+
+        freq++;
+
+        auto& new_list = m_freq_to_keys[freq];
+
+        new_list.push_front(key);
+        it = new_list.begin();
+
+    }
 
 public:
     LFUCache(size_t capacity) : Cache<K, V>(capacity) {};
@@ -114,62 +134,60 @@ public:
 
     bool contains(const K key) const override
     {
-        return m_data.find(key) != m_data.end();
+        return m_key_to_pair.find(key) != m_key_to_pair.end();
     }
 
-    void extract(const K key) const override
+    void extract(const K key) override
     {
-        auto it = m_freq.find(key);
-        if (it == m_freq.end()) return;
+        auto it = m_key_to_pair.find(key);
+        if (it == m_key_to_pair.end()) return;
 
-        m_freq.erase(it);
-        m_last_used.erase(key);
-        
+        int freq = it->second.first;
+
+        auto list_it = it->second.second;
+        m_freq_to_keys[freq].erase(list_it);
+
+        if (m_freq_to_keys[freq].empty())
+        {
+            m_freq_to_keys.erase(freq);
+        }
+
+        m_key_to_pair.erase(it);
     }
+
 
     std::optional<K> insert(const K key) override
     {
-        if (m_capacity == 0)
-        {
-            return key;
-        }
-        
-
         if (contains(key))
         {
-            m_freq[key]++;
-            m_last_used[key] = ++m_counter;
+            increment_frequency(key);
+
             return std::nullopt;
         }
 
-        K element_to_erase;
+        std::optional<K> element_to_erase;
 
-        if (m_freq.size() == m_capacity)
+        if (m_key_to_pair.size() == m_capacity)
         {
-            
+            auto& min_freq_list = m_freq_to_keys.begin()->second;
 
-            int min_freq = std::numeric_limits<int>::max();
-            int max_counter = std::numeric_limits<int>::max();
+            K victim = min_freq_list.back();
+            min_freq_list.pop_back();
 
-            for (const auto& [k, f] : m_freq)
+            if (min_freq_list.empty())
             {
-                if (f < min_freq || (f == min_freq && m_last_used[k] < max_counter))
-                {
-                    min_freq = f;
-                    max_counter = m_last_used[k];
-
-                    element_to_erase = k;
-                }
+                m_freq_to_keys.erase(m_freq_to_keys.begin());
             }
 
-            m_freq.erase(element_to_erase);
-            m_last_used.erase(element_to_erase);
+
+            m_key_to_pair.erase(victim);
+            element_to_erase = victim;
         }
 
 
+        m_freq_to_keys[1].push_front(key);
 
-        m_freq[key] = 1;
-        m_last_used[key] = ++m_counter;
+        m_key_to_pair.emplace(key, std::make_pair(1, m_freq_to_keys[1].begin()));
 
         return element_to_erase;
     }
@@ -193,7 +211,7 @@ std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, size_t cap
 
     else if (algorithm == "LFU")
     {
-        return std::make_unique<LRUCache<K, V>>(capacity);
+        return std::make_unique<LFUCache<K, V>>(capacity);
     }
 
     assert(false);
@@ -237,8 +255,7 @@ public:
 
             if (*hit_level == 0)
             {
-                m_levels[*hit_level]->key_found_to_front(key);
-
+                m_levels[*hit_level]->insert(key);
                 return hit_level;
             }
 
@@ -261,11 +278,13 @@ public:
 };
 
 template<typename K, typename V>
-void access_and_record_hit(K key, CacheSystem<K, V>& chs, int& hits)
+void access_and_record_hit(K key, CacheSystem<K, V>& chs, std::vector<int>& hits)
 {
-    if (chs.access(key).has_value())
+    auto hit_level = chs.access(key);
+
+    if (hit_level.has_value())
     {
-        hits++;
+        hits[hit_level.value()]++;
     }
 
 }
@@ -277,25 +296,28 @@ int main()
     std::vector<std::unique_ptr<Cache<int, int>>> levels;
     levels.reserve(3);
 
-    for (std::size_t i = 0; i < 3; ++i)
-    {
-        
-
-        levels.push_back(make_cache<int, int>("LFU", 5));
-    }
+    levels.push_back(make_cache<int, int>("LRU", 2));
+    levels.push_back(make_cache<int, int>("LFU", 5));
+    
 
     CacheSystem<int, int> chs(std::move(levels));
 
-    int hits = 0;
+    std::vector<int> hits = {};
+    hits.reserve(3);
 
 
     access_and_record_hit(5, chs, hits);
+    access_and_record_hit(6, chs, hits);
     access_and_record_hit(5, chs, hits);
-    access_and_record_hit(3, chs, hits);
-    access_and_record_hit(3, chs, hits);
+    access_and_record_hit(7, chs, hits);
+    access_and_record_hit(5, chs, hits);
+    access_and_record_hit(6, chs, hits);
 
 
-    std::cout << hits;
+    for (int i = 0; i < 3; i++)
+    {
+        std::cout << "level " << i << " has " << hits[i] << " hits\n";
+    }
 
     return 0;
 }
