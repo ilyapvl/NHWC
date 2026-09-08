@@ -2,9 +2,11 @@
 #include <optional>
 #include <list>
 #include <unordered_map>
+#include <map>
 #include <cassert>
 #include <memory>
 #include <string>
+#include <limits>
 
 
 
@@ -24,7 +26,6 @@ public:
     }
 
     virtual bool contains(const K key) const = 0;
-    virtual void key_found_to_front(const K key) = 0;
 
     virtual void extract(const K key) = 0;
     virtual std::optional<K> insert(const K key) = 0;
@@ -52,12 +53,6 @@ public:
         return m_positions.find(key) != m_positions.end();
     }
 
-    void key_found_to_front(const K key) override
-    {
-        const auto old_position = m_positions.at(key);
-        m_order.splice(m_order.begin(), m_order, old_position);
-    }
-
     void extract(const K key) override
     {
         auto it = m_positions.find(key);
@@ -74,11 +69,21 @@ public:
     {
         if (m_capacity == 0) return key;
 
+        auto it = m_positions.find(key);
+
+        if (it != m_positions.end())
+        {
+            m_order.splice(m_order.begin(), m_order, it->second);
+
+            return std::nullopt;
+        }
+
         std::optional<K> element_to_erase;
 
         if (m_order.size() == m_capacity)
         {
             element_to_erase = m_order.back();
+
             m_positions.erase(*element_to_erase);
             m_order.pop_back();
 
@@ -93,6 +98,109 @@ public:
 
 };
 
+
+
+
+
+
+template<typename K, typename V>
+class LFUCache : public Cache<K, V>
+{
+private:
+    std::map<int, std::list<K>> m_freq_to_keys;
+    std::unordered_map<K, std::pair<int, typename std::list<K>::iterator>> m_key_to_pair;
+
+    void increment_frequency(const K key)
+    {
+        auto& [freq, it] = m_key_to_pair[key];
+
+        auto& old_list = m_freq_to_keys[freq];
+        old_list.erase(it);
+
+        if (old_list.empty()) m_freq_to_keys.erase(freq);
+
+        freq++;
+
+        auto& new_list = m_freq_to_keys[freq];
+
+        new_list.push_front(key);
+        it = new_list.begin();
+
+    }
+
+public:
+    LFUCache(size_t capacity) : Cache<K, V>(capacity) {};
+    using Cache<K, V>::m_capacity;
+
+    bool contains(const K key) const override
+    {
+        return m_key_to_pair.find(key) != m_key_to_pair.end();
+    }
+
+    void extract(const K key) override
+    {
+        auto it = m_key_to_pair.find(key);
+        if (it == m_key_to_pair.end()) return;
+
+        int freq = it->second.first;
+
+        auto list_it = it->second.second;
+        m_freq_to_keys[freq].erase(list_it);
+
+        if (m_freq_to_keys[freq].empty())
+        {
+            m_freq_to_keys.erase(freq);
+        }
+
+        m_key_to_pair.erase(it);
+    }
+
+
+    std::optional<K> insert(const K key) override
+    {
+        if (contains(key))
+        {
+            increment_frequency(key);
+
+            return std::nullopt;
+        }
+
+        std::optional<K> element_to_erase;
+
+        if (m_key_to_pair.size() == m_capacity)
+        {
+            auto& min_freq_list = m_freq_to_keys.begin()->second;
+
+            K victim = min_freq_list.back();
+            min_freq_list.pop_back();
+
+            if (min_freq_list.empty())
+            {
+                m_freq_to_keys.erase(m_freq_to_keys.begin());
+            }
+
+
+            m_key_to_pair.erase(victim);
+            element_to_erase = victim;
+        }
+
+
+        m_freq_to_keys[1].push_front(key);
+
+        m_key_to_pair.emplace(key, std::make_pair(1, m_freq_to_keys[1].begin()));
+
+        return element_to_erase;
+    }
+};
+
+
+
+
+
+
+
+
+
 template<typename K, typename V>
 std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, size_t capacity)
 {
@@ -101,23 +209,15 @@ std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, size_t cap
         return std::make_unique<LRUCache<K, V>>(capacity);
     }
 
+    else if (algorithm == "LFU")
+    {
+        return std::make_unique<LFUCache<K, V>>(capacity);
+    }
+
     assert(false);
 }
 
 
-
-
-class HitCounter
-{
-private:
-    size_t m_hits = 0;
-
-public:
-    void record_hit() { ++m_hits; }
-    size_t hits() { return m_hits; }
-
-
-};
 
 
 
@@ -127,11 +227,10 @@ class CacheSystem
 {
 private:
     std::vector<std::unique_ptr<Cache<K, V>>> m_levels;
-    HitCounter& m_hit_counter;
 
 public:
-    CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels, HitCounter& hit_counter)
-        : m_levels(std::move(levels)), m_hit_counter(hit_counter)
+    CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels)
+        : m_levels(std::move(levels))
     {
 
     }
@@ -153,12 +252,10 @@ public:
 
         if (hit_level.has_value())
         {
-            m_hit_counter.record_hit();
 
             if (*hit_level == 0)
             {
-                m_levels[*hit_level]->key_found_to_front(key);
-
+                m_levels[*hit_level]->insert(key);
                 return hit_level;
             }
 
@@ -180,30 +277,47 @@ public:
 
 };
 
+template<typename K, typename V>
+void access_and_record_hit(K key, CacheSystem<K, V>& chs, std::vector<int>& hits)
+{
+    auto hit_level = chs.access(key);
+
+    if (hit_level.has_value())
+    {
+        hits[hit_level.value()]++;
+    }
+
+}
+
 
 int main()
 {
-    HitCounter cntr;
 
     std::vector<std::unique_ptr<Cache<int, int>>> levels;
     levels.reserve(3);
 
-    for (std::size_t i = 0; i < 3; ++i)
+    levels.push_back(make_cache<int, int>("LRU", 2));
+    levels.push_back(make_cache<int, int>("LFU", 5));
+    
+
+    CacheSystem<int, int> chs(std::move(levels));
+
+    std::vector<int> hits = {};
+    hits.reserve(3);
+
+
+    access_and_record_hit(5, chs, hits);
+    access_and_record_hit(6, chs, hits);
+    access_and_record_hit(5, chs, hits);
+    access_and_record_hit(7, chs, hits);
+    access_and_record_hit(5, chs, hits);
+    access_and_record_hit(6, chs, hits);
+
+
+    for (int i = 0; i < 3; i++)
     {
-        
-
-        levels.push_back(make_cache<int, int>("LRU", 5));
+        std::cout << "level " << i << " has " << hits[i] << " hits\n";
     }
-
-    CacheSystem<int, int> chs(std::move(levels), cntr);
-
-    chs.access(1);
-    chs.access(1);
-    chs.access(1);
-    chs.access(2);
-    chs.access(4);
-
-    std::cout << cntr.hits();
 
     return 0;
 }
