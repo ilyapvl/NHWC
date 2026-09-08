@@ -5,6 +5,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <limits>
 
 
 
@@ -93,10 +94,104 @@ public:
 
 };
 
+
+
+
+
+
+template<typename K, typename V>
+class LFUCache : public Cache<K, V>
+{
+private:
+    std::unordered_map<K, V> m_data;
+    std::unordered_map<K, int> m_freq;
+    std::unordered_map<K, int> m_last_used;
+    int m_counter = 0;
+
+public:
+    LFUCache(size_t capacity) : Cache<K, V>(capacity) {};
+    using Cache<K, V>::m_capacity;
+
+    bool contains(const K key) const override
+    {
+        return m_data.find(key) != m_data.end();
+    }
+
+    void extract(const K key) const override
+    {
+        auto it = m_freq.find(key);
+        if (it == m_freq.end()) return;
+
+        m_freq.erase(it);
+        m_last_used.erase(key);
+        
+    }
+
+    std::optional<K> insert(const K key) override
+    {
+        if (m_capacity == 0)
+        {
+            return key;
+        }
+        
+
+        if (contains(key))
+        {
+            m_freq[key]++;
+            m_last_used[key] = ++m_counter;
+            return std::nullopt;
+        }
+
+        K element_to_erase;
+
+        if (m_freq.size() == m_capacity)
+        {
+            
+
+            int min_freq = std::numeric_limits<int>::max();
+            int max_counter = std::numeric_limits<int>::max();
+
+            for (const auto& [k, f] : m_freq)
+            {
+                if (f < min_freq || (f == min_freq && m_last_used[k] < max_counter))
+                {
+                    min_freq = f;
+                    max_counter = m_last_used[k];
+
+                    element_to_erase = k;
+                }
+            }
+
+            m_freq.erase(element_to_erase);
+            m_last_used.erase(element_to_erase);
+        }
+
+
+
+        m_freq[key] = 1;
+        m_last_used[key] = ++m_counter;
+
+        return element_to_erase;
+    }
+};
+
+
+
+
+
+
+
+
+
 template<typename K, typename V>
 std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, size_t capacity)
 {
     if (algorithm == "LRU")
+    {
+        return std::make_unique<LRUCache<K, V>>(capacity);
+    }
+
+    else if (algorithm == "LFU")
     {
         return std::make_unique<LRUCache<K, V>>(capacity);
     }
@@ -107,19 +202,6 @@ std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, size_t cap
 
 
 
-class HitCounter
-{
-private:
-    size_t m_hits = 0;
-
-public:
-    void record_hit() { ++m_hits; }
-    size_t hits() { return m_hits; }
-
-
-};
-
-
 
 
 template<typename K, typename V>
@@ -127,11 +209,10 @@ class CacheSystem
 {
 private:
     std::vector<std::unique_ptr<Cache<K, V>>> m_levels;
-    HitCounter& m_hit_counter;
 
 public:
-    CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels, HitCounter& hit_counter)
-        : m_levels(std::move(levels)), m_hit_counter(hit_counter)
+    CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels)
+        : m_levels(std::move(levels))
     {
 
     }
@@ -153,7 +234,6 @@ public:
 
         if (hit_level.has_value())
         {
-            m_hit_counter.record_hit();
 
             if (*hit_level == 0)
             {
@@ -180,10 +260,19 @@ public:
 
 };
 
+template<typename K, typename V>
+void access_and_record_hit(K key, CacheSystem<K, V>& chs, int& hits)
+{
+    if (chs.access(key).has_value())
+    {
+        hits++;
+    }
+
+}
+
 
 int main()
 {
-    HitCounter cntr;
 
     std::vector<std::unique_ptr<Cache<int, int>>> levels;
     levels.reserve(3);
@@ -192,18 +281,21 @@ int main()
     {
         
 
-        levels.push_back(make_cache<int, int>("LRU", 5));
+        levels.push_back(make_cache<int, int>("LFU", 5));
     }
 
-    CacheSystem<int, int> chs(std::move(levels), cntr);
+    CacheSystem<int, int> chs(std::move(levels));
 
-    chs.access(1);
-    chs.access(1);
-    chs.access(1);
-    chs.access(2);
-    chs.access(4);
+    int hits = 0;
 
-    std::cout << cntr.hits();
+
+    access_and_record_hit(5, chs, hits);
+    access_and_record_hit(5, chs, hits);
+    access_and_record_hit(3, chs, hits);
+    access_and_record_hit(3, chs, hits);
+
+
+    std::cout << hits;
 
     return 0;
 }
