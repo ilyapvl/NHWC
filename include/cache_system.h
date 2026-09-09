@@ -3,6 +3,7 @@
 
 #include "lru_cache.h"
 #include "lfu_cache.h"
+#include "lirs_cache.h"
 #include <memory>
 #include <string>
 #include <vector>
