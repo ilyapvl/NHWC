@@ -14,24 +14,18 @@ int slow_get_page(int key)
     return key / 2;
 }
 
-int main(const int argc, const char* argv[])
-{
-    if (argc < 2)
-    {
-        std::cout << "No file specified" << std::endl;
 
-        return 1;
-    }
-    
-    std::ifstream config(argv[1]);
+bool read_config(const std::string filename, int& level_count,
+    std::vector<std::string>& algorithms, std::vector<std::size_t>& capacities,
+    int& num_requests, std::vector<int>& requests)
+{
+    std::ifstream config(filename);
     if (!config.is_open())
     {
         std::cerr << "Failed to open file" << std::endl;
 
         return 1;
     }
-
-    int level_count;
 
     if (!(config >> level_count))
     {
@@ -41,7 +35,7 @@ int main(const int argc, const char* argv[])
     }
 
 
-    std::vector<std::string> algorithms(level_count);
+    algorithms.resize(level_count);
     for (int i = 0; i < level_count; i++)
     {
         if (!(config >> algorithms[i]))
@@ -51,44 +45,69 @@ int main(const int argc, const char* argv[])
         }
     }
 
-    std::vector<int> capacities(level_count);
+    capacities.resize(level_count);
     for (int i = 0; i < level_count; i++)
     {
         if (!(config >> capacities[i]))
         {
             std::cerr << "Failed to read capacities" << std::endl;
-            return 1;
+            return false;
         }
     }
 
+    if (!(config >> num_requests))
+    {
+        std::cerr << "Failed to read requests count" << std::endl;
 
+        return false;
+    }
 
-    std::vector<std::unique_ptr<Cache<int, int>>> levels;
-    levels.reserve(level_count);
+    requests.resize(num_requests);
+    for (int i = 0; i < num_requests; i++)
+    {
+        if (!(config >> requests[i]))
+        {
+            std::cerr << "Failed to read requests" << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int main(const int argc, const char* argv[])
+{
+    if (argc < 2)
+    {
+        std::cout << "No file specified" << std::endl;
+
+        return 1;
+    }
+
+    int level_count = 0;
+    std::vector<std::string> algorithms = {};
+    std::vector<std::size_t> capacities = {};
+    std::vector<std::unique_ptr<Cache<int, int>>> levels = {};
+    int num_requests = {};
+    std::vector<int> requests = {};
+
+    if(!read_config(argv[1], level_count, algorithms, capacities, num_requests, requests)) return 1;
+
+    
+
     for (int i = 0; i < level_count; i++)
     {
         levels.push_back(make_cache<int, int>(algorithms[i], capacities[i]));
     }
 
-
-    int num_requests = 0;
-    if (!(config >> num_requests))
-    {
-        std::cerr << "Failed to read requests count" << std::endl;
-
-        return 1;
-    }
-
     CacheSystem<int, int> chs(std::move(levels), slow_get_page);
 
-    std::vector<int> hits(level_count, 0);
+    
 
-    std::vector<int> requests(num_requests, 0);
+    std::vector<int> hits(level_count, 0);
     
     for (int i = 0; i < num_requests; i++)
     {
-        config >> requests[i];
-
         chs.access(requests[i]);
     }
 
