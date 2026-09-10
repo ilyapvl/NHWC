@@ -1,10 +1,12 @@
 #include "cache_system.h"
+#include "opt_cache.h"
 #include <iostream>
 #include <vector>
 #include <memory>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <cstddef>
 
 int slow_get_page(int key)
 {
@@ -81,11 +83,13 @@ int main(const int argc, const char* argv[])
 
     std::vector<int> hits(level_count, 0);
 
-
-    int key;
-    while (config >> key)
+    std::vector<int> requests(num_requests, 0);
+    
+    for (int i = 0; i < num_requests; i++)
     {
-        chs.access(key);
+        config >> requests[i];
+
+        chs.access(requests[i]);
     }
 
 
@@ -100,6 +104,16 @@ int main(const int argc, const char* argv[])
     for (int i = 0; i < level_count; i++) total_hits += chs.get_hits(i);
 
     std::cout << "total " << total_hits << " / " << num_requests << std::endl;
+
+
+
+    std::size_t total_capacity = 0;
+    for (int c : capacities) total_capacity += c;
+
+    OptimalCache<int, int> ideal(total_capacity, requests);
+    int ideal_hits = ideal.simulate();
+
+    std::cout << "ideal: " << ideal_hits << " / " << num_requests << std::endl;
 
     return 0;
 }
