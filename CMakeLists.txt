@@ -15,6 +15,8 @@ target_sources(main PRIVATE
     include/lru_cache.tpp
     include/lfu_cache.h
     include/lfu_cache.tpp
+    include/opt_cache.h
+    include/opt_cache.tpp
     include/cache_system.h
     include/cache_system.tpp
 )
