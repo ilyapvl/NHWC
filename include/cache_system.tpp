@@ -12,6 +12,10 @@ std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, std::size_
     {
         return std::make_unique<LFUCache<K, V>>(capacity);
     }
+    else if (algorithm == "LIRS")
+    {
+        return std::make_unique<LIRSCache<K, V>>(capacity);
+    }
 
     assert(false);
 }
