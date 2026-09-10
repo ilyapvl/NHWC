@@ -170,7 +170,7 @@ void LIRSCache<K, V>::restore_lir_after_extraction()
         ++m_lir_count;
     }
 
-    bottom_lir_to_hir();
+    remove_hir_from_stack_bottom();
 }
 
 
@@ -200,11 +200,8 @@ std::optional<V> LIRSCache<K, V>::get(const K key) const
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V value)
+std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V value, const bool is_user_request)
 {
-    //FIXME - only works as a 0 level correctly
-    // need to differ the user request and insertion from the lower level
-
     if (contains(key))
     {
         Element_info& info = m_element_infos.at(key);
@@ -262,7 +259,7 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V valu
     move_to_stack_front(key, info);
 
     const bool warmup = m_lir_count < m_lir_capacity;
-    const bool repeated_request = was_in_stack && m_lir_capacity > 0;
+    const bool repeated_request = was_in_stack && m_lir_capacity > 0 && is_user_request;
 
     if (warmup || repeated_request)
     {

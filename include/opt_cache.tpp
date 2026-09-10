@@ -111,7 +111,7 @@ std::optional<V> OptimalCache<K, V>::get(const K key) const
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> OptimalCache<K, V>::insert(const K key, const V value)
+std::optional<std::pair<K, V>> OptimalCache<K, V>::insert(const K key, const V value, const bool is_user_request)
 {
     return std::nullopt;
 }

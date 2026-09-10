@@ -47,7 +47,7 @@ void LFUCache<K, V>::extract(const K key)
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LFUCache<K, V>::insert(const K key, const V value)
+std::optional<std::pair<K, V>> LFUCache<K, V>::insert(const K key, const V value, const bool is_user_request)
 {
     if (contains(key))
     {

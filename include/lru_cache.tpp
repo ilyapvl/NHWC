@@ -19,10 +19,11 @@ void LRUCache<K, V>::extract(const K key)
 
     m_order.erase(it->second);
     m_positions.erase(it);
+    m_values.erase(key);
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K key, const V value)
+std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K key, const V value, const bool is_user_request)
 {
     auto it = m_positions.find(key);
 
