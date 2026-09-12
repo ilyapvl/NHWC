@@ -31,7 +31,7 @@ CacheSystem<K, V>::CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels,
 template<typename K, typename V>
 V CacheSystem<K, V>::access(const K key)
 {
-    for (std::size_t i = 0; i < m_levels.size(); i++)
+    for (int i = 0; i < m_levels.size(); i++)
     {
         if (m_levels[i]->contains(key))
         {
@@ -48,12 +48,12 @@ V CacheSystem<K, V>::access(const K key)
 
 
             std::optional<std::pair<K, V>> moving = std::make_pair(key, value);
-            for (std::size_t j = 0; j < m_levels.size() && moving.has_value(); j++)
+            for (int j = 0; j < m_levels.size() && moving.has_value(); j++)
             {
                 moving = m_levels[j]->insert(moving->first, moving->second, j == 0);
             }
 
-
+            m_last_hit_level = i;
             m_hits[i]++;
             return value;
         }

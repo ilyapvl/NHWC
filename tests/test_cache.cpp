@@ -49,7 +49,7 @@ TestCase parse_file(const std::string path, TestCase& test)
 
     
 
-    if (!in) assert(false && "invalid test file");
+    if (!in.is_open()) assert(false && "invalid test file");
 
     std::string line;
 
@@ -234,9 +234,5 @@ int main(int argc, char** argv)
 
     testing::InitGoogleTest(&argc, argv);
 
-    RUN_ALL_TESTS();
-    
-
-
-    return 0;
+    return RUN_ALL_TESTS();
 }

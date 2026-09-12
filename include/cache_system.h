@@ -21,12 +21,14 @@ class CacheSystem
 private:
     std::vector<std::unique_ptr<Cache<K, V>>> m_levels;
     std::function<V(const K&)> m_slow_get_page;
-    std::vector<std::size_t> m_hits;
+    std::vector<int> m_hits;
+    int m_last_hit_level = 0;
 
 public:
     CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels, std::function<V(const K&)> slow_get_page);
     V access(const K key);
-    std::size_t get_hits(std::size_t level) const { return m_hits.at(level); }
+    int get_hits(int level) const { return m_hits.at(level); }
+    int get_last_hit_level() const { return m_last_hit_level; }
 
 };
 

@@ -43,6 +43,29 @@ target_compile_definitions(cache_test PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests"
 )
 
+
+
+
+
+add_executable(cache_system_test
+    tests/test_system.cpp
+)
+target_include_directories(cache_system_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(cache_system_test PRIVATE GTest::gtest)
+
+target_compile_definitions(cache_system_test PRIVATE
+    TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests"
+)
+
+add_test(NAME cache_system_test COMMAND cache_system_test)
+
+
+
+
+
+
 include(GoogleTest)
 gtest_discover_tests(cache_test
     DISCOVERY_MODE PRE_TEST

@@ -1,0 +1,10 @@
+levels 2
+level LRU 2
+level LRU 3
+
+access 5 -> miss 5
+access 6 -> miss 6
+access 5 -> hit 0 5
+access 7 -> miss 7
+access 5 -> hit 0 5
+access 6 -> hit 1 6
