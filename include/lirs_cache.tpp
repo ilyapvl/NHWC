@@ -227,7 +227,7 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V valu
         
         m_values[key] = value;
 
-
+        remove_hir_from_stack_bottom();
         return std::nullopt;
     }
 

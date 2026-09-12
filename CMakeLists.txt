@@ -33,16 +33,18 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(lru_cache_tests
-    tests/test_lru.cpp
+add_executable(cache_test
+    tests/test_cache.cpp
 )
-target_include_directories(lru_cache_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(lru_cache_tests PRIVATE GTest::gtest_main)
+target_include_directories(cache_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(cache_test PRIVATE GTest::gtest)
 
-target_compile_definitions(lru_cache_tests PRIVATE
+target_compile_definitions(cache_test PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests"
 )
 
 include(GoogleTest)
-gtest_discover_tests(lru_cache_tests)
+gtest_discover_tests(cache_test
+    DISCOVERY_MODE PRE_TEST
+)
 

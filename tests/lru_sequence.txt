@@ -1,3 +1,4 @@
+algorithm LRU
 capacity 2
 
 insert 1 10 >/ none
