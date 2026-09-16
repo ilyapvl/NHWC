@@ -226,7 +226,9 @@ int main(int argc, char** argv)
         for (int i = 1; i < argc; i++) 
         {
             std::string arg = argv[i];
-            if (arg.rfind("file=", 0) == 0) test_file_paths.push_back(arg);
+            std::string a;
+            
+            if (arg.rfind("file=", 0) == 0) test_file_paths.push_back(arg.substr(5));
         }
     }
 
