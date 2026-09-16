@@ -19,6 +19,8 @@ target_sources(main PRIVATE
     include/lirs_cache.tpp
     include/opt_cache.h
     include/opt_cache.tpp
+    include/arc_cache.h
+    include/arc_cache.tpp
     include/cache_system.h
     include/cache_system.tpp
 )
