@@ -105,6 +105,7 @@ const std::vector<std::string> default_files = {
     "../tests/lru_sequence.txt",
     "../tests/lfu_sequence.txt",
     "../tests/lirs_sequence.txt",
+    "../tests/arc_sequence.txt",
 };
 
 
