@@ -20,6 +20,10 @@ std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, std::size_
     {
         return std::make_unique<ARCCache<K, V>>(capacity);
     }
+    else if (algorithm == "2Q")
+    {
+        return std::make_unique<TwoQCache<K, V>>(capacity);
+    }
 
     assert(false);
 }

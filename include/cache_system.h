@@ -5,6 +5,7 @@
 #include "lfu_cache.h"
 #include "lirs_cache.h"
 #include "arc_cache.h"
+#include "twoq_cache.h"
 #include <memory>
 #include <string>
 #include <vector>
