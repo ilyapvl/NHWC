@@ -29,6 +29,13 @@ private:
         std::list<K>::iterator queue_it;
     };
 
+    struct State
+    {
+        bool is_lir = false;
+    };
+
+    GhostInfo<K, State> m_system_ghost { m_capacity };
+
     std::unordered_map<K, Element_info> m_element_infos;
 
     std::size_t m_lir_capacity;
@@ -45,7 +52,9 @@ private:
     void exctract_hir();
     void bottom_lir_to_hir();
     void hir_to_lir(Element_info& info);
-    void restore_lir_after_extraction();
+
+    std::optional<K> restore_lir_after_extraction();
+    std::optional<K> m_last_promoted; //FIXME - temporal solution
 
 
 public:
@@ -57,6 +66,7 @@ public:
     std::optional<V> get(const K key) const override;
     std::optional<std::pair<K, V>> insert(const K key, const V value, const bool is_user_request) override;
     void extract(const K key) override;
+    void touch(const K key) override;
 
     void dump(std::ostream& out) const override;
 

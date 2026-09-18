@@ -59,7 +59,7 @@ V CacheSystem<K, V>::access(const K key)
             std::optional<std::pair<K, V>> moving = std::make_pair(key, value);
             for (int j = 0; j < m_levels.size() && moving.has_value(); j++)
             {
-                moving = m_levels[j]->insert(moving->first, moving->second, j == 0);
+                moving = m_levels[j]->insert(moving->first, moving->second, true); //TODO - insert()
             }
 
             m_last_hit_level = i;
@@ -76,7 +76,7 @@ V CacheSystem<K, V>::access(const K key)
     std::optional<std::pair<K, V>> moving = std::make_pair(key, value);
     for (std::size_t j = 0; j < m_levels.size() && moving.has_value(); j++)
     {
-        moving = m_levels[j]->insert(moving->first, moving->second, j == 0);
+        moving = m_levels[j]->insert(moving->first, moving->second, true); //TODO - insert()
     }
 
     return value;

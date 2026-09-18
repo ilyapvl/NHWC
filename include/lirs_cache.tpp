@@ -153,9 +153,10 @@ void LIRSCache<K, V>::hir_to_lir(Element_info& info)
 
 
 template<typename K, typename V>
-void LIRSCache<K, V>::restore_lir_after_extraction()
+std::optional<K> LIRSCache<K, V>::restore_lir_after_extraction()
 {
     const std::size_t desired = std::min(m_lir_capacity, m_resident_count);
+    std::optional<K> promoted;
 
     while (m_lir_count < desired)
     {
@@ -168,9 +169,13 @@ void LIRSCache<K, V>::restore_lir_after_extraction()
 
         info.lir = true;
         ++m_lir_count;
+
+        promoted = key;
     }
 
     remove_hir_from_stack_bottom();
+
+    return promoted;
 }
 
 
@@ -204,40 +209,37 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V valu
 {
     if (contains(key))
     {
-        Element_info& info = m_element_infos.at(key);
-        if (info.lir)
-        {
-            move_to_stack_front(key, info);
-        }
-        
-        else
-        {
-            const bool was_in_stack = info.in_stack;
-            move_to_stack_front(key, info);
-            if (was_in_stack && m_lir_capacity > 0)
-            {
-                hir_to_lir(info);
-            }
-            
-            else
-            {
-                move_to_queue_front(key, info);
-            }
-        }
-        
+        touch(key);
         m_values[key] = value;
 
-        remove_hir_from_stack_bottom();
         return std::nullopt;
     }
 
-    if (m_capacity == 0)
+    auto saved = m_system_ghost.pop(key);
+    const bool ghost_promotes_to_lir = saved.has_value() && saved->is_lir;
+
+
+    if (ghost_promotes_to_lir && m_last_promoted.has_value())
     {
-        return std::make_pair(key, value);
+        K last_promoted = m_last_promoted.value();
+        auto it = m_element_infos.find(last_promoted);
+
+        if (it != m_element_infos.end() && it->second.resident && it->second.lir)
+        {
+            Element_info& last_promoted_info = it->second;
+            last_promoted_info.lir = false;
+            m_lir_count--;
+            move_to_queue_front(last_promoted, last_promoted_info);
+        }
     }
 
+    m_last_promoted.reset();
+
+
+
+
     auto old = m_element_infos.find(key);
-    const bool was_in_stack = (old != m_element_infos.end() && old->second.in_stack);
+    const bool was_in_stack = (old != m_element_infos.end()) && old->second.in_stack;
 
     std::optional<std::pair<K, V>> erased_element;
 
@@ -261,7 +263,7 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V valu
     const bool warmup = m_lir_count < m_lir_capacity;
     const bool repeated_request = was_in_stack && m_lir_capacity > 0 && is_user_request;
 
-    if (warmup || repeated_request)
+    if (warmup || repeated_request || ghost_promotes_to_lir)
     {
         hir_to_lir(info);
     }
@@ -286,6 +288,8 @@ void LIRSCache<K, V>::extract(const K key)
     Element_info& info = it->second;
     V value = m_values[key];
 
+    m_system_ghost.save(key, State{info.lir});
+
     if (info.lir)
     {
         m_lir_count--;
@@ -297,8 +301,42 @@ void LIRSCache<K, V>::extract(const K key)
     m_element_infos.erase(it);
     m_values.erase(key);
 
-    restore_lir_after_extraction();
+    m_last_promoted.reset();
+    m_last_promoted = restore_lir_after_extraction();
 
+}
+
+
+template<typename K, typename V>
+void LIRSCache<K, V>::touch(const K key)
+{
+    auto it = m_element_infos.find(key);
+    if (it == m_element_infos.end() || !it->second.resident) return;
+
+    Element_info& info = it->second;
+
+    if (info.lir)
+    {
+        move_to_stack_front(key, info);
+    }
+
+    else
+    {
+        const bool was_in_stack = info.in_stack;
+        move_to_stack_front(key, info);
+
+        if (was_in_stack && m_lir_capacity > 0)
+        {
+            hir_to_lir(info);
+        }
+
+        else
+        {
+            move_to_queue_front(key, info);
+        }
+    }
+
+    remove_hir_from_stack_bottom();
 }
 
 
