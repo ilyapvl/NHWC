@@ -22,12 +22,14 @@ public:
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 
-    bool contains(const K key) const override;
-    void extract(const K key) override;
+    bool contains(const K& key) const override;
+    void extract(const K& key) override;
     
-    std::optional<V> get(const K key) const override;
+    std::optional<V> get(const K& key) const override;
 
-    std::optional<std::pair<K, V>> insert(const K key, const V value, const bool is_user_request) override;
+    std::optional<std::pair<K, V>> insert(const K& key, const V& value) override;
+
+    void touch(const K& key) override;
 
     void dump(std::ostream& out) const override;
 };

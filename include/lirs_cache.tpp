@@ -17,7 +17,7 @@ std::size_t LIRSCache<K, V>::get_lir_capacity(std::size_t capacity)
 }
 
 template<typename K, typename V>
-void LIRSCache<K, V>::move_to_stack_front(const K key, Element_info& element_info)
+void LIRSCache<K, V>::move_to_stack_front(const K& key, Element_info& element_info)
 {
     if (element_info.in_stack)
     {
@@ -34,7 +34,7 @@ void LIRSCache<K, V>::move_to_stack_front(const K key, Element_info& element_inf
 }
 
 template<typename K, typename V>
-void LIRSCache<K, V>::move_to_queue_front(const K key, Element_info& element_info)
+void LIRSCache<K, V>::move_to_queue_front(const K& key, Element_info& element_info)
 {
     assert(element_info.resident);
     assert(!element_info.lir);
@@ -125,7 +125,7 @@ void LIRSCache<K, V>::bottom_lir_to_hir()
 
     if (m_stack.empty()) return;
 
-    const K key = m_stack.back();
+    const K& key = m_stack.back();
 
     Element_info& info = m_element_infos.at(key);
 
@@ -161,7 +161,7 @@ std::optional<K> LIRSCache<K, V>::restore_lir_after_extraction()
     while (m_lir_count < desired)
     {
         if (m_queue.empty()) break;
-        const K key = m_queue.front();
+        const K& key = m_queue.front();
         Element_info& info = m_element_infos.at(key);
 
         remove_from_queue(info);
@@ -185,7 +185,7 @@ std::optional<K> LIRSCache<K, V>::restore_lir_after_extraction()
 
 
 template<typename K, typename V>
-bool LIRSCache<K, V>::contains(const K key) const
+bool LIRSCache<K, V>::contains(const K& key) const
 {
     auto it = m_element_infos.find(key);
 
@@ -193,7 +193,7 @@ bool LIRSCache<K, V>::contains(const K key) const
 }
 
 template<typename K, typename V>
-std::optional<V> LIRSCache<K, V>::get(const K key) const
+std::optional<V> LIRSCache<K, V>::get(const K& key) const
 {
     auto it = m_values.find(key);
     if (it != m_values.end())
@@ -205,7 +205,7 @@ std::optional<V> LIRSCache<K, V>::get(const K key) const
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V value, const bool is_user_request)
+std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K& key, const V& value)
 {
     if (contains(key))
     {
@@ -261,7 +261,7 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V valu
     move_to_stack_front(key, info);
 
     const bool warmup = m_lir_count < m_lir_capacity;
-    const bool repeated_request = was_in_stack && m_lir_capacity > 0 && is_user_request;
+    const bool repeated_request = was_in_stack && m_lir_capacity > 0;
 
     if (warmup || repeated_request || ghost_promotes_to_lir)
     {
@@ -280,7 +280,7 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K key, const V valu
 }
 
 template<typename K, typename V>
-void LIRSCache<K, V>::extract(const K key)
+void LIRSCache<K, V>::extract(const K& key)
 {
     auto it = m_element_infos.find(key);
     if (it == m_element_infos.end() || !it->second.resident) return;
@@ -308,7 +308,7 @@ void LIRSCache<K, V>::extract(const K key)
 
 
 template<typename K, typename V>
-void LIRSCache<K, V>::touch(const K key)
+void LIRSCache<K, V>::touch(const K& key)
 {
     auto it = m_element_infos.find(key);
     if (it == m_element_infos.end() || !it->second.resident) return;

@@ -28,12 +28,12 @@ public:
 
     std::size_t capacity() const;
 
-    virtual bool contains(const K key) const = 0;
+    virtual bool contains(const K& key) const = 0;
 
-    virtual void extract(const K key) = 0; //TODO - maybe return std::optional
-    virtual std::optional<std::pair<K, V>> insert(const K key, const V value, const bool is_user_request) = 0; //TODO - no need for is_user_request
-    virtual std::optional<V> get(const K key) const = 0;
-    virtual void touch(const K key) {};
+    virtual void extract(const K& key) = 0; //TODO - maybe return std::optional
+    virtual std::optional<std::pair<K, V>> insert(const K& key, const V& value) = 0;
+    virtual std::optional<V> get(const K& key) const = 0;
+    virtual void touch(const K& key) = 0;
 
 
     virtual void dump(std::ostream& out) const = 0;

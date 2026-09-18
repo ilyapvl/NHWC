@@ -47,12 +47,12 @@ public:
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 
-    bool contains(const K key) const override;
-    std::optional<V> get(const K key) const override;
-    std::optional<std::pair<K, V>> insert(const K key, const V value, bool is_user_request = true) override;
-    void extract(const K key) override;
+    bool contains(const K& key) const override;
+    std::optional<V> get(const K& key) const override;
+    std::optional<std::pair<K, V>> insert(const K& key, const V& value) override;
+    void extract(const K& key) override;
 
-    void touch(const K key) override;
+    void touch(const K& key) override;
 
 
 

@@ -5,13 +5,13 @@ template<typename K, typename V>
 LRUCache<K, V>::LRUCache(std::size_t capacity) : Cache<K, V>(capacity) {}
 
 template<typename K, typename V>
-bool LRUCache<K, V>::contains(const K key) const
+bool LRUCache<K, V>::contains(const K& key) const
 {
     return m_positions.find(key) != m_positions.end();
 }
 
 template<typename K, typename V>
-void LRUCache<K, V>::extract(const K key)
+void LRUCache<K, V>::extract(const K& key)
 {
     auto it = m_positions.find(key);
 
@@ -23,7 +23,7 @@ void LRUCache<K, V>::extract(const K key)
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K key, const V value, const bool is_user_request)
+std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K& key, const V& value)
 {
     if (m_capacity == 0) return std::make_pair(key, value);
 
@@ -54,7 +54,7 @@ std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K key, const V value
 }
 
 template<typename K, typename V>
-std::optional<V> LRUCache<K, V>::get(const K key) const
+std::optional<V> LRUCache<K, V>::get(const K& key) const
 {
     auto it = m_values.find(key);
     if (it != m_values.end())
@@ -66,7 +66,8 @@ std::optional<V> LRUCache<K, V>::get(const K key) const
 }
 
 
-
+template<typename K, typename V>
+void LRUCache<K, V>::touch(const K& key) {};
 
 
 

@@ -5,7 +5,7 @@ template<typename K, typename V>
 LFUCache<K, V>::LFUCache(std::size_t capacity) : Cache<K, V>(capacity) {}
 
 template<typename K, typename V>
-void LFUCache<K, V>::increment_frequency(const K key)
+void LFUCache<K, V>::increment_frequency(const K& key)
 {
     auto& [freq, it] = m_key_to_pair[key];
 
@@ -22,13 +22,13 @@ void LFUCache<K, V>::increment_frequency(const K key)
 }
 
 template<typename K, typename V>
-bool LFUCache<K, V>::contains(const K key) const
+bool LFUCache<K, V>::contains(const K& key) const
 {
     return m_key_to_pair.find(key) != m_key_to_pair.end();
 }
 
 template<typename K, typename V>
-void LFUCache<K, V>::extract(const K key)
+void LFUCache<K, V>::extract(const K& key)
 {
     auto it = m_key_to_pair.find(key);
     if (it == m_key_to_pair.end()) return;
@@ -49,7 +49,7 @@ void LFUCache<K, V>::extract(const K key)
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LFUCache<K, V>::insert(const K key, const V value, const bool is_user_request)
+std::optional<std::pair<K, V>> LFUCache<K, V>::insert(const K& key, const V& value)
 {
     if (contains(key))
     {
@@ -95,7 +95,7 @@ std::optional<std::pair<K, V>> LFUCache<K, V>::insert(const K key, const V value
 }
 
 template<typename K, typename V>
-std::optional<V> LFUCache<K, V>::get(const K key) const
+std::optional<V> LFUCache<K, V>::get(const K& key) const
 {
     auto it = m_values.find(key);
     if (it != m_values.end())

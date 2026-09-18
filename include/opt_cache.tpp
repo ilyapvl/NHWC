@@ -103,25 +103,29 @@ int OptimalCache<K, V>::simulate()
 
 
 template<typename K, typename V>
-bool OptimalCache<K, V>::contains(const K key) const
+bool OptimalCache<K, V>::contains(const K& key) const
 {
     return m_is_resident.find(key) != m_is_resident.end();
 }
 
 template<typename K, typename V>
-std::optional<V> OptimalCache<K, V>::get(const K key) const
+std::optional<V> OptimalCache<K, V>::get(const K& key) const
 {
     return std::nullopt;
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> OptimalCache<K, V>::insert(const K key, const V value, const bool is_user_request)
+std::optional<std::pair<K, V>> OptimalCache<K, V>::insert(const K& key, const V& value)
 {
     return std::nullopt;
 }
 
 template<typename K, typename V>
-void OptimalCache<K, V>::extract(const K key) {};
+void OptimalCache<K, V>::extract(const K& key) {};
+
+
+template<typename K, typename V>
+void OptimalCache<K, V>::touch(const K& key) {};
 
 
 

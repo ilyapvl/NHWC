@@ -81,7 +81,7 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::replace(const bool hit_in_b2)
 
 
 template<typename K, typename V>
-bool ARCCache<K, V>::contains(const K key) const
+bool ARCCache<K, V>::contains(const K& key) const
 {
     auto it = m_element_infos.find(key);
     return it != m_element_infos.end() && it->second.resident;
@@ -89,7 +89,7 @@ bool ARCCache<K, V>::contains(const K key) const
 
 
 template<typename K, typename V>
-std::optional<V> ARCCache<K, V>::get(const K key) const
+std::optional<V> ARCCache<K, V>::get(const K& key) const
 {
     auto it = m_values.find(key);
     if (it != m_values.end()) return it->second;
@@ -98,7 +98,7 @@ std::optional<V> ARCCache<K, V>::get(const K key) const
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K key, const V value, bool is_user_request)
+std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& value)
 {
     auto it = m_element_infos.find(key);
 
@@ -231,7 +231,7 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K key, const V value
 }
 
 template<typename K, typename V>
-void ARCCache<K, V>::extract(const K key)
+void ARCCache<K, V>::extract(const K& key)
 {
     auto it = m_element_infos.find(key);
     if (it == m_element_infos.end() || !it->second.resident)
@@ -252,7 +252,7 @@ void ARCCache<K, V>::extract(const K key)
 
 
 template<typename K, typename V>
-void ARCCache<K, V>::touch(const K key)
+void ARCCache<K, V>::touch(const K& key)
 {
     auto it = m_element_infos.find(key);
     if (it == m_element_infos.end() || !it->second.resident) return;

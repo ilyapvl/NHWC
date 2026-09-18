@@ -133,7 +133,7 @@ void run_one_file(const std::string path)
 
         case Operation::Func::Insert:
             {
-                auto erased = cache->insert(op.key, op.value, true);
+                auto erased = cache->insert(op.key, op.value);
 
                 if (op.expected == "none")
                 {

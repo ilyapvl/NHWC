@@ -25,19 +25,19 @@ private:
     
     GhostInfo<K, State> m_ghost_info { m_capacity };
 
-    void increment_frequency(const K key);
+    void increment_frequency(const K& key);
 
 public:
     LFUCache(std::size_t capacity);
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 
-    bool contains(const K key) const override;
-    void extract(const K key) override;
-    std::optional<std::pair<K, V>> insert(const K key, const V value, const bool is_user_request) override;
-    std::optional<V> get(const K key) const override;
+    bool contains(const K& key) const override;
+    void extract(const K& key) override;
+    std::optional<std::pair<K, V>> insert(const K& key, const V& value) override;
+    std::optional<V> get(const K& key) const override;
 
-    void touch(const K key) override
+    void touch(const K& key) override
     {
         if (contains(key)) increment_frequency(key);
     };
