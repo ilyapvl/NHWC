@@ -30,6 +30,8 @@ public:
     void extract(const K key) override;
     std::optional<std::pair<K, V>> insert(const K key, const V value, const bool is_user_request) override;
     std::optional<V> get(const K key) const override;
+
+    void dump(std::ostream& out) const override;
 };
 
 #include "lfu_cache.tpp"

@@ -94,4 +94,29 @@ std::optional<V> LFUCache<K, V>::get(const K key) const
     return std::nullopt;
 }
 
+
+
+template<typename K, typename V>
+void LFUCache<K, V>::dump(std::ostream& out) const
+{
+    out << "LFUCache (size=" << m_key_to_pair.size()
+        << "/" << m_capacity << ")\n";
+
+    for (const auto& [freq, keys] : m_freq_to_keys) {
+        out << "    freq " << freq << " [MRU -> LRU]: ";
+        bool first = true;
+        for (const auto& key : keys) {
+            if (!first) out << ", ";
+            first = false;
+
+            auto it = m_values.find(key);
+            if (it != m_values.end())
+                out << key;
+            else
+                out << key << "=NOVALUE ";
+        }
+        out << '\n';
+    }
+}
+
 #endif // LFU_CACHE_TPP

@@ -27,10 +27,10 @@ void TwoQCache<K, V>::remove_from_list(Element_info& info)
 template<typename K, typename V>
 void TwoQCache<K, V>::trim_ghost()
 {
-    while (m_q1.size() > m_target_q1_size)
+    while (m_ghost.size() > m_target_q1_size)
     {
-        m_element_infos.erase(m_q1.back());
-        m_q1.pop_back();
+        m_element_infos.erase(m_ghost.back());
+        m_ghost.pop_back();
     }
 }
 
@@ -167,5 +167,46 @@ void TwoQCache<K, V>::extract(const K key)
 
 
 
+
+template<typename K, typename V>
+void TwoQCache<K, V>::dump(std::ostream& out) const
+{
+    out << "TwoQCache (size=" << (m_q1.size() + m_q2.size())
+        << "/" << m_capacity
+        << ", |A1|=" << m_q1.size()
+        << ", |Am|=" << m_q2.size()
+        << ", |A1out|=" << m_ghost.size()
+        << ", Kin=" << m_target_q1_size
+        << ", Kout=" << m_target_ghost_size << ")\n";
+
+    auto print_resident = [&](const std::list<K>& lst, const char* name) {
+        out << "    " << name << " [MRU -> LRU]: ";
+        bool first = true;
+        for (const auto& key : lst) {
+            if (!first) out << ", ";
+            first = false;
+
+            auto it = m_values.find(key);
+            if (it != m_values.end()) out << key;
+            else out << key << "=NOVALUE ";
+        }
+        out << '\n';
+    };
+
+    auto print_ghost = [&](const std::list<K>& lst, const char* name) {
+        out << "    " << name << " [MRU -> LRU]: ";
+        bool first = true;
+        for (const auto& key : lst) {
+            if (!first) out << ", ";
+            first = false;
+            out << key;
+        }
+        out << '\n';
+    };
+
+    print_resident(m_q1,    "A1 (recent)   ");
+    print_resident(m_q2,    "Am (frequent) ");
+    print_ghost   (m_ghost, "A1out (ghost) ");
+}
 
 #endif // TWOQ_CACHE_TPP

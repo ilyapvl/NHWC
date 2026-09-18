@@ -63,4 +63,30 @@ std::optional<V> LRUCache<K, V>::get(const K key) const
     return std::nullopt;
 }
 
+
+
+
+
+
+template<typename K, typename V>
+void LRUCache<K, V>::dump(std::ostream& out) const
+{
+    out << "LRUCache (size=" << m_order.size()
+        << "/" << m_capacity << ")\n";
+
+    out << "    order [MRU -> LRU]: ";
+    bool first = true;
+    for (const auto& key : m_order) {
+        if (!first) out << ", ";
+        first = false;
+
+        auto it = m_values.find(key);
+        if (it != m_values.end())
+            out << key;
+        else
+            out << key << "=NOVALUE ";
+    }
+    out << '\n';
+}
+
 #endif // LRU_CACHE_TPP

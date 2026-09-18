@@ -49,6 +49,8 @@ public:
     std::optional<V> get(const K key) const override;
     std::optional<std::pair<K, V>> insert(const K key, const V value, bool is_user_request) override;
     void extract(const K key) override;
+
+    void dump(std::ostream& out) const override;
 };
 
 

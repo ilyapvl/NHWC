@@ -91,6 +91,10 @@ int OptimalCache<K, V>::simulate()
 
             m_is_resident[key] = true;
         }
+
+
+
+        // dump(std::cout);
     }
 
     return hits;
@@ -118,5 +122,33 @@ std::optional<std::pair<K, V>> OptimalCache<K, V>::insert(const K key, const V v
 
 template<typename K, typename V>
 void OptimalCache<K, V>::extract(const K key) {};
+
+
+
+
+template<typename K, typename V>
+void OptimalCache<K, V>::dump(std::ostream& out) const
+{
+    out << "OptimalCache (capacity=" << m_capacity
+        << ", resident=" << m_is_resident.size()
+        << ", next_index=" << m_current_index
+        << "/" << m_sequence.size() << ")\n";
+
+    out << "    resident [key(next use position)]: ";
+    bool first = true;
+    for (const auto& [key, _] : m_is_resident) {
+        if (!first) out << ", ";
+        first = false;
+
+        out << key;
+        auto it = m_future_positions.find(key);
+        if (it != m_future_positions.end() && !it->second.empty())
+            out << "(next@" << it->second.front() << ")";
+        else
+            out << "(never)";
+    }
+    out << '\n';
+}
+
 
 #endif // OPTIMAL_CACHE_TPP

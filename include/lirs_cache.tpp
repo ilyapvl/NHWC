@@ -301,4 +301,55 @@ void LIRSCache<K, V>::extract(const K key)
 
 }
 
+
+
+template<typename K, typename V>
+void LIRSCache<K, V>::dump(std::ostream& out) const
+{
+    std::size_t ghost_count = 0;
+    for (const auto& [_, info] : m_element_infos) {
+        if (!info.resident) ++ghost_count;
+    }
+
+    out << "LIRSCache (resident=" << m_resident_count << "/" << this->m_capacity
+        << ", LIR=" << m_lir_count << "/" << m_lir_capacity
+        << ", HIR=" << m_queue.size()
+        << ", GHOST=" << ghost_count << ")\n";
+
+    out << "    S [top -> bottom]: ";
+    bool first = true;
+    for (const auto& key : m_stack) {
+        if (!first) out << ", ";
+        first = false;
+
+        auto it = m_element_infos.find(key);
+        if (it == m_element_infos.end()) {
+            out << key << ":?";
+            continue;
+        }
+
+        const Element_info& info = it->second;
+        const char* state =
+            info.lir      ? "LIR"   :
+            info.resident ? "HIR"   : "GHOST";
+
+        out << key << ":" << state;
+    }
+    out << '\n';
+
+    out << "    Q [MRU -> LRU]:     ";
+    first = true;
+    for (const auto& key : m_queue) {
+        if (!first) out << ", ";
+        first = false;
+
+        auto vit = m_values.find(key);
+        if (vit != m_values.end())
+            out << key;
+        else
+            out << key << "=NOVALUE ";
+    }
+    out << '\n';
+}
+
 #endif // LIRS_CACHE_TPP
