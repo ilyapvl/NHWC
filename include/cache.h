@@ -13,6 +13,8 @@
 #include <cstddef>
 #include <utility>
 
+#include "ghost_info.h"
+
 template <typename K, typename V>
 class Cache
 {
@@ -31,8 +33,10 @@ public:
     virtual void extract(const K key) = 0;
     virtual std::optional<std::pair<K, V>> insert(const K key, const V value, const bool is_user_request) = 0;
     virtual std::optional<V> get(const K key) const = 0;
+    virtual void touch(const K key) {};
 
-    //virtual void dump(std::ostream& out) const = 0;
+
+    virtual void dump(std::ostream& out) const = 0;
 };
 
 #include "cache.tpp"

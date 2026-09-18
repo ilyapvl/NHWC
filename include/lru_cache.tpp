@@ -25,6 +25,8 @@ void LRUCache<K, V>::extract(const K key)
 template<typename K, typename V>
 std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K key, const V value, const bool is_user_request)
 {
+    if (m_capacity == 0) return std::make_pair(key, value);
+
     auto it = m_positions.find(key);
 
     if (it != m_positions.end())
@@ -61,6 +63,32 @@ std::optional<V> LRUCache<K, V>::get(const K key) const
     }
 
     return std::nullopt;
+}
+
+
+
+
+
+
+template<typename K, typename V>
+void LRUCache<K, V>::dump(std::ostream& out) const
+{
+    out << "LRUCache (size=" << m_order.size()
+        << "/" << m_capacity << ")\n";
+
+    out << "    order [MRU -> LRU]: ";
+    bool first = true;
+    for (const auto& key : m_order) {
+        if (!first) out << ", ";
+        first = false;
+
+        auto it = m_values.find(key);
+        if (it != m_values.end())
+            out << key;
+        else
+            out << key << "=NOVALUE ";
+    }
+    out << '\n';
 }
 
 #endif // LRU_CACHE_TPP

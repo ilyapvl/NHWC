@@ -17,7 +17,13 @@ class LFUCache : public Cache<K, V>
 private:
     std::map<int, std::list<K>> m_freq_to_keys;
     std::unordered_map<K, std::pair<int, typename std::list<K>::iterator>> m_key_to_pair;
+
+    struct State
+    {
+        int freq;
+    };
     
+    GhostInfo<K, State> m_ghost_info { m_capacity };
 
     void increment_frequency(const K key);
 
@@ -30,6 +36,13 @@ public:
     void extract(const K key) override;
     std::optional<std::pair<K, V>> insert(const K key, const V value, const bool is_user_request) override;
     std::optional<V> get(const K key) const override;
+
+    void touch(const K key) override
+    {
+        if (contains(key)) increment_frequency(key);
+    };
+
+    void dump(std::ostream& out) const override;
 };
 
 #include "lfu_cache.tpp"

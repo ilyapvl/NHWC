@@ -109,6 +109,15 @@ int main(const int argc, const char* argv[])
     for (int i = 0; i < num_requests; i++)
     {
         chs.access(requests[i]);
+        for (std::size_t j = 0; j < chs.levels().size(); j++)
+        {
+            std::cout << "=== level " << j << " ===\n";
+            chs.levels()[j]->dump(std::cout);
+            std::cout << '\n';
+        }
+
+        for (int i =0; i < 20; i++) std::cout << "---";
+        std::cout << '\n';
     }
 
 

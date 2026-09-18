@@ -20,6 +20,10 @@ std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, std::size_
     {
         return std::make_unique<ARCCache<K, V>>(capacity);
     }
+    else if (algorithm == "2Q")
+    {
+        return std::make_unique<TwoQCache<K, V>>(capacity);
+    }
 
     assert(false);
 }
@@ -47,6 +51,7 @@ V CacheSystem<K, V>::access(const K key)
 
             if (i > 0)
             {
+                m_levels[i]->touch(key); 
                 m_levels[i]->extract(key);
             }
 

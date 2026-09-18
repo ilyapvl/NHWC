@@ -265,4 +265,46 @@ void ARCCache<K, V>::touch(const K key)
 
 
 
+template<typename K, typename V>
+void ARCCache<K, V>::dump(std::ostream& out) const
+{
+    out << "ARCCache (size=" << (m_t1.size() + m_t2.size())
+        << "/" << m_capacity
+        << ", |T1|=" << m_t1.size()
+        << ", |T2|=" << m_t2.size()
+        << ", |B1|=" << m_b1.size()
+        << ", |B2|=" << m_b2.size()
+        << ", p=" << m_target_t1_size << ")\n";
+
+    auto print_resident = [&](const std::list<K>& lst, const char* name) {
+        out << "    " << name << " [MRU -> LRU]: ";
+        bool first = true;
+        for (const auto& key : lst) {
+            if (!first) out << ", ";
+            first = false;
+
+            auto it = m_values.find(key);
+            if (it != m_values.end()) out << key;
+            else out << key << "=NOVALUE ";
+        }
+        out << '\n';
+    };
+
+    auto print_ghost = [&](const std::list<K>& lst, const char* name) {
+        out << "    " << name << " [MRU -> LRU]: ";
+        bool first = true;
+        for (const auto& key : lst) {
+            if (!first) out << ", ";
+            first = false;
+            out << key;
+        }
+        out << '\n';
+    };
+
+    print_resident(m_t1, "T1 (recent)  ");
+    print_resident(m_t2, "T2 (frequent)");
+    print_ghost   (m_b1, "B1 (ghost T1)");
+    print_ghost   (m_b2, "B2 (ghost T2)");
+}
+
 #endif // ARC_CACHE_TPP

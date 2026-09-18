@@ -21,6 +21,8 @@ target_sources(main PRIVATE
     include/opt_cache.tpp
     include/arc_cache.h
     include/arc_cache.tpp
+    include/twoq_cache.h
+    include/twoq_cache.tpp
     include/cache_system.h
     include/cache_system.tpp
 )
