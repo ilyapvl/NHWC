@@ -139,7 +139,7 @@ int main(const int argc, const char* argv[])
     for (int c : capacities) total_capacity += c;
 
     OptimalCache<int, int> ideal(total_capacity, requests);
-    int ideal_hits = ideal.simulate(false);
+    int ideal_hits = ideal.simulate();
 
     std::cout << "ideal: " << ideal_hits << " / " << num_requests << std::endl;
 

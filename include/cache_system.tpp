@@ -51,6 +51,7 @@ V CacheSystem<K, V>::access(const K key)
 
             if (i > 0)
             {
+                m_levels[i]->touch(key); 
                 m_levels[i]->extract(key);
             }
 
