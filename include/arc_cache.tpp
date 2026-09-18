@@ -167,6 +167,13 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K key, const V value
     const std::size_t t2_size = m_t2.size();
     const std::size_t b2_size = m_b2.size();
 
+    List target_list = List::T1;
+    auto saved = m_system_ghost.pop(key);
+    if (saved.has_value())
+    {
+        target_list = saved->list;
+    }
+
     if (current_t1_size + b1_size == m_capacity)
     {
         if (current_t1_size < m_capacity)
@@ -212,7 +219,12 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K key, const V value
 
     Element_info& element_info = m_element_infos.try_emplace(key).first->second;
     element_info.resident = true;
-    push_to_front(m_t1, key, element_info, List::T1);
+    
+    if (target_list == List::T2) //TODO - move this into push_to_front
+        push_to_front(m_t2, key, element_info, List::T2);
+    else
+        push_to_front(m_t1, key, element_info, List::T1);
+
     m_values[key] = value;
 
     return erased;
@@ -229,12 +241,26 @@ void ARCCache<K, V>::extract(const K key)
 
     Element_info& element_info = it->second;
 
+    m_system_ghost.save(key, State{element_info.list});
+
     remove_from_list(element_info);
     m_element_infos.erase(it);
     m_values.erase(key);
 }
 
 
+
+
+template<typename K, typename V>
+void ARCCache<K, V>::touch(const K key)
+{
+    auto it = m_element_infos.find(key);
+    if (it == m_element_infos.end() || !it->second.resident) return;
+
+    Element_info& info = it->second;
+    remove_from_list(info);
+    push_to_front(m_t2, key, info, List::T2);
+}
 
 
 
