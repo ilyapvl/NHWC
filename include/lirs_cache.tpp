@@ -179,6 +179,43 @@ std::optional<K> LIRSCache<K, V>::restore_lir_after_extraction()
 }
 
 
+template<typename K, typename V>
+void LIRSCache<K, V>::cut_stack()
+{
+    const std::size_t max_stack_size = 2 * m_capacity;
+
+    while (m_stack.size() > max_stack_size)
+    {
+        bool removed = false;
+
+        auto it = m_stack.end();
+        while (it != m_stack.begin())
+        {
+            it--;
+
+            auto info_it = m_element_infos.find(*it);
+            if (info_it == m_element_infos.end()) continue;
+            if (info_it->second.resident) continue;
+
+
+            K key = *it;
+            m_stack.erase(it);
+            m_element_infos.erase(key);
+            removed = true;
+            break;
+        }
+
+
+        if (!removed) break;
+    }
+}
+
+
+
+
+
+
+
 
 
 
@@ -276,6 +313,9 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K& key, const V& va
 
     m_values[key] = value;
 
+
+    cut_stack();
+
     return erased_element;
 }
 
@@ -304,6 +344,7 @@ void LIRSCache<K, V>::extract(const K& key)
     m_last_promoted.reset();
     m_last_promoted = restore_lir_after_extraction();
 
+    cut_stack();
 }
 
 
@@ -337,6 +378,7 @@ void LIRSCache<K, V>::touch(const K& key)
     }
 
     remove_hir_from_stack_bottom();
+    cut_stack();
 }
 
 
