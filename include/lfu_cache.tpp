@@ -34,6 +34,8 @@ void LFUCache<K, V>::extract(const K key)
     if (it == m_key_to_pair.end()) return;
 
     int freq = it->second.first;
+    m_ghost_info.save(key, State{freq});
+
     auto list_it = it->second.second;
     m_freq_to_keys[freq].erase(list_it);
 
@@ -75,8 +77,18 @@ std::optional<std::pair<K, V>> LFUCache<K, V>::insert(const K key, const V value
         
     }
 
-    m_freq_to_keys[1].push_front(key);
-    m_key_to_pair.emplace(key, std::make_pair(1, m_freq_to_keys[1].begin()));
+    int freq = 1;
+
+    auto g = m_ghost_info.pop(key);
+
+
+    if (g.has_value())
+    {
+        freq = g.value().freq;
+    }
+
+    m_freq_to_keys[freq].push_front(key);
+    m_key_to_pair.emplace(key, std::make_pair(freq, m_freq_to_keys[freq].begin()));
     m_values[key] = value;
 
     return element_to_erase;
@@ -93,6 +105,9 @@ std::optional<V> LFUCache<K, V>::get(const K key) const
 
     return std::nullopt;
 }
+
+
+
 
 
 
@@ -118,5 +133,9 @@ void LFUCache<K, V>::dump(std::ostream& out) const
         out << '\n';
     }
 }
+
+
+
+
 
 #endif // LFU_CACHE_TPP

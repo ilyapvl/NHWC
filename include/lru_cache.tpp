@@ -25,6 +25,8 @@ void LRUCache<K, V>::extract(const K key)
 template<typename K, typename V>
 std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K key, const V value, const bool is_user_request)
 {
+    if (m_capacity == 0) return std::make_pair(key, value);
+
     auto it = m_positions.find(key);
 
     if (it != m_positions.end())
