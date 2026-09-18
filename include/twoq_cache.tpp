@@ -27,7 +27,7 @@ void TwoQCache<K, V>::remove_from_list(Element_info& info)
 template<typename K, typename V>
 void TwoQCache<K, V>::trim_ghost()
 {
-    while (m_ghost.size() > m_target_q1_size)
+    while (m_ghost.size() > m_target_ghost_size)
     {
         m_element_infos.erase(m_ghost.back());
         m_ghost.pop_back();
@@ -94,7 +94,7 @@ template<typename K, typename V>
 std::optional<V> TwoQCache<K, V>::get(const K key) const
 {
     auto it = m_values.find(key);
-    if (contains(key)) return it->second;
+    if (it != m_values.end()) return it->second;
 
     return std::nullopt;
 }
@@ -120,28 +120,53 @@ std::optional<std::pair<K, V>> TwoQCache<K, V>::insert(const K key, const V valu
         return std::nullopt;
     }
 
+    const bool was_in_ghost = (it != m_element_infos.end()) && (it->second.list == List::GHOST);
+
+    bool target_q2 = was_in_ghost;
+    auto saved = m_system_ghost.pop(key);
+
+    if (saved.has_value())
+    {
+        if (saved->list == List::Q2) target_q2 = true;
+    }
+
     std::optional<std::pair<K, V>> evicted = replace();
 
-    if (it != m_element_infos.end() && it->second.list == List::GHOST)
-    {
-        Element_info& info = it->second;
-        m_ghost.erase(info.it);
 
+    it = m_element_infos.find(key);
+
+    Element_info& info = (was_in_ghost && it != m_element_infos.end() && it->second.list == List::GHOST)
+            ? it->second
+            : m_element_infos.try_emplace(key).first->second;
+
+
+    if (info.list == List::GHOST)
+    {
+        m_ghost.erase(info.it);
+        info.list = List::None;
+    }
+
+    if (target_q2)
+    {
         m_q2.push_front(key);
+
         info.it = m_q2.begin();
         info.list = List::Q2;
-        info.is_resident = true;
     }
-    
+
+
+
+
     else
     {
-        Element_info& info = m_element_infos.try_emplace(key).first->second;
-        info.is_resident = true;
-
         m_q1.push_front(key);
+
         info.it = m_q1.begin();
         info.list = List::Q1;
     }
+
+
+    info.is_resident = true;
 
     m_values[key] = value;
     return evicted;
@@ -160,10 +185,31 @@ void TwoQCache<K, V>::extract(const K key)
 
     Element_info& info = it->second;
 
+    m_system_ghost.save(key, State{info.list});
     remove_from_list(info);
     m_element_infos.erase(it);
     m_values.erase(key);
 }
+
+
+
+
+template<typename K, typename V>
+void TwoQCache<K, V>::touch(const K key)
+{
+    auto it = m_element_infos.find(key);
+    if (it == m_element_infos.end() || !it->second.is_resident) return;
+
+    Element_info& info = it->second;
+    remove_from_list(info);
+    m_q2.push_front(key);
+
+    info.it = m_q2.begin();
+    info.list = List::Q2;
+}
+
+
+
 
 
 

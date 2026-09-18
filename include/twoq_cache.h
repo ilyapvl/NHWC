@@ -27,6 +27,13 @@ private:
         typename std::list<K>::iterator it;
     };
 
+    struct State
+    {
+        List list = List::Q1;
+    };
+    
+    GhostInfo<K, State> m_system_ghost { m_capacity };
+
     std::list<K> m_q1;
     std::list<K> m_q2;
     std::list<K> m_ghost;
@@ -49,6 +56,8 @@ public:
     std::optional<V> get(const K key) const override;
     std::optional<std::pair<K, V>> insert(const K key, const V value, bool is_user_request) override;
     void extract(const K key) override;
+
+    void touch(const K key) override;
 
     void dump(std::ostream& out) const override;
 };
