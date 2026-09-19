@@ -36,7 +36,11 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::replace(const bool hit_in_b2)
 {
     const std::size_t current_t1_size = m_t1.size();
 
+    if (m_t1.empty() && m_t2.empty()) return std::nullopt;
+
     const bool evict_from_t1 = (current_t1_size >= 1) && ((hit_in_b2 && current_t1_size == m_target_t1_size) || (current_t1_size > m_target_t1_size));
+
+    
 
     K victim;
     V victim_value;
@@ -101,6 +105,7 @@ template<typename K, typename V>
 std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K key, const V value, bool is_user_request)
 {
     auto it = m_element_infos.find(key);
+    const std::size_t resident_size = m_t1.size() + m_t2.size();
 
     // hit in T1 or T2
     // push into T2
@@ -182,12 +187,12 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K key, const V value
             m_b1.pop_back();
             m_element_infos.erase(b1_victim);
 
-            erased = replace(false);
+            if (resident_size >= m_capacity) erased = replace(false);
         }
         
         else
         {
-            // b1 is full
+            // t1 is full
             K t1_victim = m_t1.back();
             V t1_value = m_values[t1_victim];
 
@@ -212,8 +217,10 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K key, const V value
                 m_element_infos.erase(b2_victim);
             }
 
-
-            erased = replace(false);
+            if (resident_size >= m_capacity)
+            {
+                erased = replace(false);
+            }
         }
     }
 
