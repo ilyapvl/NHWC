@@ -52,6 +52,7 @@ private:
     void exctract_hir();
     void bottom_lir_to_hir();
     void hir_to_lir(Element_info& info);
+    void cut_stack();
 
     std::optional<K> restore_lir_after_extraction();
     std::optional<K> m_last_promoted; //FIXME - temporal solution
