@@ -8,6 +8,7 @@
 #include <optional>
 #include <cassert>
 #include <cstddef>
+#include <map> 
 
 template<typename K, typename V>
 class OptimalCache : public Cache<K, V>
@@ -23,6 +24,9 @@ private:
     void build_future_positions();
 
     K select_element_to_remove();
+
+    std::map<int, K> m_resident_by_next_use;
+    std::unordered_map<K, int> m_key_to_next_use; 
 
 public:
     OptimalCache(std::size_t capacity, const std::vector<K>& sequence);
