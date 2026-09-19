@@ -161,7 +161,7 @@ std::optional<K> LIRSCache<K, V>::restore_lir_after_extraction()
     while (m_lir_count < desired)
     {
         if (m_queue.empty()) break;
-        const K& key = m_queue.front();
+        const K key = m_queue.front();
         Element_info& info = m_element_infos.at(key);
 
         remove_from_queue(info);
@@ -182,31 +182,23 @@ std::optional<K> LIRSCache<K, V>::restore_lir_after_extraction()
 template<typename K, typename V>
 void LIRSCache<K, V>::cut_stack()
 {
-    const std::size_t max_stack_size = 2 * m_capacity;
+    const std::size_t high_size = 3 * m_capacity;
+    const std::size_t low_size = 2 * m_capacity;
 
-    while (m_stack.size() > max_stack_size)
+    if (m_stack.size() <= high_size) return;
+
+    auto it = m_stack.end();
+    while (it != m_stack.begin() && m_stack.size() > low_size)
     {
-        bool removed = false;
+        it--;
 
-        auto it = m_stack.end();
-        while (it != m_stack.begin())
-        {
-            it--;
+        auto info_it = m_element_infos.find(*it);
 
-            auto info_it = m_element_infos.find(*it);
-            if (info_it == m_element_infos.end()) continue;
-            if (info_it->second.resident) continue;
+        if (info_it->second.resident) continue;
 
-
-            K key = *it;
-            m_stack.erase(it);
-            m_element_infos.erase(key);
-            removed = true;
-            break;
-        }
-
-
-        if (!removed) break;
+        K key = *it;
+        it = m_stack.erase(it);
+        m_element_infos.erase(key);
     }
 }
 
