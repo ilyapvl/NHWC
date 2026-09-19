@@ -18,42 +18,6 @@ void OptimalCache<K, V>::build_future_positions()
     }
 }
 
-template <typename K, typename V>
-K OptimalCache<K, V>::select_element_to_remove()
-{
-    K element_to_remove;
-    int farthest = 0;
-    bool found = false;
-
-
-    for (const auto& [key, resident] : m_is_resident)
-    {
-        auto it = m_future_positions.find(key);
-
-        if (it == m_future_positions.end() || it->second.empty())
-        {
-            return key;
-        }
-
-
-        int next_use = it->second.front();
-
-        if (!found || next_use > farthest)
-        {
-            farthest = next_use;
-            element_to_remove = key;
-
-            found = true;
-        }
-    }
-
-    assert(found);
-
-    return element_to_remove;
-
-}
-
-
 
 template <typename K, typename V>
 int OptimalCache<K, V>::simulate()
@@ -67,29 +31,53 @@ int OptimalCache<K, V>::simulate()
 
 
 
-        auto it = m_future_positions.find(key);
-        if (it != m_future_positions.end() || it->second.empty())
+        auto it_future = m_future_positions.find(key);
+        if (it_future != m_future_positions.end() && !it_future->second.empty())
         {
-            it->second.pop_front();
+            it_future->second.pop_front();
         }
 
-        if (m_is_resident.find(key) != m_is_resident.end())
+        if (m_key_to_next_use.find(key) != m_key_to_next_use.end())
         {
             hits++;
+
+            int old_next = m_key_to_next_use[key];
+            m_resident_by_next_use.erase(old_next);
+            m_key_to_next_use.erase(key);
+
+            int new_next = std::numeric_limits<int>::max();
+
+            if (it_future != m_future_positions.end() && !it_future->second.empty())
+            {
+                new_next = it_future->second.front();
+            }
+            m_key_to_next_use[key] = new_next;
+            m_resident_by_next_use[key] = key;
         }
 
         else
         {
-            if (m_is_resident.size() == m_capacity)
+            if (m_key_to_next_use.size() == m_capacity)
             {
-                K element_to_erase = select_element_to_remove();
-                m_is_resident.erase(element_to_erase);
+                auto it_last_resident = m_resident_by_next_use.end();
+                it_last_resident--;
+
+                K element_to_erase = it_last_resident->second;
+                m_key_to_next_use.erase(element_to_erase);
+                m_resident_by_next_use.erase(element_to_erase);
                 m_values.erase(element_to_erase);
             }
             
 
 
-            m_is_resident[key] = true;
+            int new_next_use = std::numeric_limits<int>::max();
+
+            if (it_future != m_future_positions.end() && !it_future->second.empty())
+            {
+                new_next_use = it_future->second.front();
+            }
+            m_key_to_next_use[key] = new_next_use;
+            m_resident_by_next_use[new_next_use] = key;
         }
 
 
@@ -105,7 +93,7 @@ int OptimalCache<K, V>::simulate()
 template<typename K, typename V>
 bool OptimalCache<K, V>::contains(const K& key) const
 {
-    return m_is_resident.find(key) != m_is_resident.end();
+    return m_key_to_next_use.find(key) != m_key_to_next_use.end();
 }
 
 template<typename K, typename V>
