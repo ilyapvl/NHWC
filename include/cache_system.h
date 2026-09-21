@@ -30,7 +30,7 @@ private:
 
 public:
     CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page);
-    std::unique_ptr<Cache<K, V>> add_cache(const std::string& algorithm, std::size_t capacity);
+    void add_cache(const std::string& algorithm, std::size_t capacity);
 
     V access(const K& key);
     int get_hits(int level) const { return m_hits.at(level); }

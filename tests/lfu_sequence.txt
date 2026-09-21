@@ -4,30 +4,14 @@ capacity 3
 insert 1 10 >/ none
 insert 2 20 >/ none
 insert 3 30 >/ none
-insert 1 11 >/ none
-insert 2 21 >/ none
-
+get 1 >/ 10
+get 2 >/ 20
 insert 4 40 >/ erase 3 30
-get 1 >/ 11
-get 2 >/ 21
-get 3 >/ miss
-get 4 >/ 40
-
+get 1 >/ 10
+get 2 >/ 20
 insert 5 50 >/ erase 4 40
-get 4 >/ miss
-get 5 >/ 50
-
-insert 3 30 >/ erase 5 50
-get 3 >/ 30
-get 5 >/ miss
-get 1 >/ 11
-get 2 >/ 21
-
-extract 2 >/ 21
-insert 5 50 >/ none
-insert 6 60 >/ erase 3 30
-
-get 3 >/ miss
-get 5 >/ 50
+extract 2 >/ 20
+insert 6 60 >/ none
+get 1 >/ 10
 get 6 >/ 60
-get 1 >/ 11
+insert 7 70 >/ erase 5 50

@@ -15,7 +15,7 @@ std::unique_ptr<const V> LRUCache<K, V>::extract_ptr(const K& key)
 {
     auto it = m_positions.find(key);
 
-    assert(it != m_positions.end());
+    if (it == m_positions.end()) return nullptr;
 
     auto vit = m_values.find(key);
     auto vptr = (vit != m_values.end()) ? std::move(vit->second) : nullptr;

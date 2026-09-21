@@ -2,7 +2,7 @@
 #define CACHE_SYSTEM_TPP
 
 template<typename K, typename V>
-std::unique_ptr<Cache<K, V>> CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capacity)
+void CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capacity)
 {
     
     if (algorithm == "LRU")
@@ -26,7 +26,7 @@ std::unique_ptr<Cache<K, V>> CacheSystem<K, V>::add_cache(const std::string& alg
         m_levels.push_back(std::make_unique<TwoQCache<K, V>>(capacity));
     }
 
-    return nullptr;
+    m_hits.push_back(0);
 }
 
 template<typename K, typename V>

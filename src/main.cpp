@@ -87,13 +87,6 @@ int main(const int argc, const char* argv[])
 
 
 
-    LIRSCache<int, int> test(3);
-    test.insert(1, slow_get_page(1));
-    test.insert(3, slow_get_page(3));
-    std::cout << test.get(3).value();
-    test.dump(std::cout);
-    test.extract(3);
-    test.dump(std::cout);
 
 
 

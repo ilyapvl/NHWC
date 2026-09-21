@@ -41,7 +41,7 @@ public:
         auto r = insert_ptr(key, std::move(p));
 
         if (!r) return std::nullopt;
-        return std::make_pair(r->first, V(*r->second));
+        return std::make_pair(r->first, *r->second);
     }
 
     std::optional<V> extract(const K& key)
