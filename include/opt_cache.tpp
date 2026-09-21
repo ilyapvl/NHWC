@@ -97,24 +97,19 @@ bool OptimalCache<K, V>::contains(const K& key) const
 }
 
 template<typename K, typename V>
-std::optional<V> OptimalCache<K, V>::get(const K& key) const
+std::optional<V> OptimalCache<K, V>::get(const K& key)
 {
     return std::nullopt;
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> OptimalCache<K, V>::insert(const K& key, const V& value)
+std::optional<std::pair<K, std::unique_ptr<const V>>> OptimalCache<K, V>::insert_ptr(const K& key, std::unique_ptr<const V> vptr)
 {
     return std::nullopt;
 }
 
 template<typename K, typename V>
-void OptimalCache<K, V>::extract(const K& key) {};
-
-
-template<typename K, typename V>
-void OptimalCache<K, V>::touch(const K& key) {};
-
+std::unique_ptr<const V> OptimalCache<K, V>::extract_ptr(const K& key) {};
 
 
 

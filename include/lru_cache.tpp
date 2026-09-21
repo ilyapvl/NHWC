@@ -11,64 +11,76 @@ bool LRUCache<K, V>::contains(const K& key) const
 }
 
 template<typename K, typename V>
-void LRUCache<K, V>::extract(const K& key)
+std::unique_ptr<const V> LRUCache<K, V>::extract_ptr(const K& key)
 {
     auto it = m_positions.find(key);
 
     assert(it != m_positions.end());
 
+    auto vit = m_values.find(key);
+    auto vptr = (vit != m_values.end()) ? std::move(vit->second) : nullptr;
+
     m_order.erase(it->second);
     m_positions.erase(it);
     m_values.erase(key);
+
+    return vptr;
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LRUCache<K, V>::insert(const K& key, const V& value)
+std::optional<std::pair<K, std::unique_ptr<const V>>> LRUCache<K, V>::insert_ptr(const K& key, std::unique_ptr<const V> vptr)
 {
-    if (m_capacity == 0) return std::make_pair(key, value);
+    if (!vptr) return std::nullopt;
+    if (m_capacity == 0) return std::make_pair(key, std::move(vptr));
 
     auto it = m_positions.find(key);
 
     if (it != m_positions.end())
     {
         m_order.splice(m_order.begin(), m_order, it->second);
-        m_values[key] = value;
+        m_values[key] = std::move(vptr);
         return std::nullopt;
     }
 
-    std::optional<std::pair<K,V>> element_to_erase;
+    std::optional<std::pair<K, std::unique_ptr<const V>>> erased;
 
     if (m_order.size() == m_capacity)
     {
-        element_to_erase = std::make_pair(m_order.back(), m_values[m_order.back()]);
-        m_positions.erase(element_to_erase->first);
-        m_values.erase(element_to_erase->first);
+        K victim_key = m_order.back();
+
+        auto vit = m_values.find(victim_key);
+        auto vptr = std::move(vit->second);
+
+        m_positions.erase(victim_key);
+        m_values.erase(vit);
         m_order.pop_back();
+
+        erased = std::make_pair(victim_key, std::move(vptr));
     }
 
     m_order.push_front(key);
     m_positions.emplace(key, m_order.begin());
-    m_values[key] = value;
+    m_values[key] = std::move(vptr);
 
-    return element_to_erase;
+    return erased;
 }
 
 template<typename K, typename V>
-std::optional<V> LRUCache<K, V>::get(const K& key) const
+std::optional<V> LRUCache<K, V>::get(const K& key)
 {
-    auto it = m_values.find(key);
-    if (it != m_values.end())
+    auto it = m_positions.find(key);
+    if (it == m_positions.end())
     {
-        return it->second;
+        return std::nullopt;
     }
 
-    return std::nullopt;
+    m_order.splice(m_order.begin(), m_order, it->second);
+
+    auto vit = m_values.find(key);
+    if (vit == m_values.end() || !vit->second) return std::nullopt;
+    
+    return *vit->second;
 }
-
-
-template<typename K, typename V>
-void LRUCache<K, V>::touch(const K& key) {};
-
 
 
 template<typename K, typename V>

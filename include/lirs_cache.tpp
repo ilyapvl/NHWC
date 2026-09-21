@@ -222,24 +222,49 @@ bool LIRSCache<K, V>::contains(const K& key) const
 }
 
 template<typename K, typename V>
-std::optional<V> LIRSCache<K, V>::get(const K& key) const
+std::optional<V> LIRSCache<K, V>::get(const K& key)
 {
-    auto it = m_values.find(key);
-    if (it != m_values.end())
+    auto it = m_element_infos.find(key);
+    if (it == m_element_infos.end() || !it->second.resident) return std::nullopt;
+
+    Element_info& info = it->second;
+
+    if (info.lir)
     {
-        return it->second;
+        move_to_stack_front(key, info);
     }
 
-    return std::nullopt;
+    else
+    {
+        const bool was_in_stack = info.in_stack;
+        move_to_stack_front(key, info);
+
+        if (was_in_stack && m_lir_capacity > 0)
+        {
+            hir_to_lir(info);
+        }
+
+        else
+        {
+            move_to_queue_front(key, info);
+        }
+    }
+
+    remove_hir_from_stack_bottom();
+    cut_stack();
+
+    auto vit = m_values.find(key);
+    if (vit == m_values.end() || !vit->second) return std::nullopt;
+
+    return *vit->second;
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K& key, const V& value)
+std::optional<std::pair<K, std::unique_ptr<const V>>> LIRSCache<K, V>::insert_ptr(const K& key, std::unique_ptr<const V> vptr)
 {
     if (contains(key))
     {
-        touch(key);
-        m_values[key] = value;
+        m_values[key] = std::move(vptr);
 
         return std::nullopt;
     }
@@ -270,15 +295,18 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K& key, const V& va
     auto old = m_element_infos.find(key);
     const bool was_in_stack = (old != m_element_infos.end()) && old->second.in_stack;
 
-    std::optional<std::pair<K, V>> erased_element;
+    std::optional<std::pair<K, std::unique_ptr<const V>>> erased;
 
     if (m_resident_count == m_capacity)
     {
         K erased_key = m_queue.back();
-        V erased_value = m_values[erased_key];
-        m_values.erase(erased_key);
+        auto vit = m_values.find(erased_key);
+
+        auto erased_vptr = std::move(vit->second);
+        m_values.erase(vit);
+
         exctract_hir();
-        erased_element = std::make_pair(erased_key, erased_value);
+        erased = std::make_pair(erased_key, std::move(erased_vptr));
     }
 
     Element_info& info = m_element_infos.try_emplace(key).first->second;
@@ -303,24 +331,27 @@ std::optional<std::pair<K, V>> LIRSCache<K, V>::insert(const K& key, const V& va
     }
 
 
-    m_values[key] = value;
+    m_values[key] = std::move(vptr);
 
 
     cut_stack();
 
-    return erased_element;
+    return erased;
 }
 
 template<typename K, typename V>
-void LIRSCache<K, V>::extract(const K& key)
+std::unique_ptr<const V> LIRSCache<K, V>::extract_ptr(const K& key)
 {
     auto it = m_element_infos.find(key);
-    if (it == m_element_infos.end() || !it->second.resident) return;
+    if (it == m_element_infos.end() || !it->second.resident) return nullptr;
 
     Element_info& info = it->second;
-    V value = m_values[key];
 
     m_system_ghost.save(key, State{info.lir});
+
+    auto vit = m_values.find(key);
+    auto vptr = (vit != m_values.end()) ? std::move(vit->second) : nullptr;
+
 
     if (info.lir)
     {
@@ -337,40 +368,8 @@ void LIRSCache<K, V>::extract(const K& key)
     m_last_promoted = restore_lir_after_extraction();
 
     cut_stack();
-}
 
-
-template<typename K, typename V>
-void LIRSCache<K, V>::touch(const K& key)
-{
-    auto it = m_element_infos.find(key);
-    if (it == m_element_infos.end() || !it->second.resident) return;
-
-    Element_info& info = it->second;
-
-    if (info.lir)
-    {
-        move_to_stack_front(key, info);
-    }
-
-    else
-    {
-        const bool was_in_stack = info.in_stack;
-        move_to_stack_front(key, info);
-
-        if (was_in_stack && m_lir_capacity > 0)
-        {
-            hir_to_lir(info);
-        }
-
-        else
-        {
-            move_to_queue_front(key, info);
-        }
-    }
-
-    remove_hir_from_stack_bottom();
-    cut_stack();
+    return vptr;
 }
 
 

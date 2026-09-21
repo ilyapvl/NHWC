@@ -32,7 +32,7 @@ void ARCCache<K, V>::push_to_front(std::list<K>& lst, const K& key, Element_info
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> ARCCache<K, V>::replace(const bool hit_in_b2)
+std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::replace(const bool hit_in_b2)
 {
     const std::size_t current_t1_size = m_t1.size();
 
@@ -43,14 +43,15 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::replace(const bool hit_in_b2)
     
 
     K victim;
-    V victim_value;
+    std::unique_ptr<const V> vptr;
 
-    if (evict_from_t1)
+    if (evict_from_t1 || m_t2.empty())
     {
         assert(!m_t1.empty());
 
         victim = m_t1.back();
-        victim_value = m_values[victim];
+
+        vptr = std::move(m_values[victim]);
 
         m_t1.pop_back();
         m_b1.push_front(victim);
@@ -67,7 +68,7 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::replace(const bool hit_in_b2)
         assert(!m_t2.empty());
 
         victim = m_t2.back();
-        victim_value = m_values[victim];
+        vptr = std::move(m_values[victim]);
 
         m_t2.pop_back();
         m_b2.push_front(victim);
@@ -80,7 +81,7 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::replace(const bool hit_in_b2)
     }
 
     m_values.erase(victim);
-    return std::make_pair(victim, victim_value);
+    return std::make_pair(victim, std::move(vptr));
 }
 
 
@@ -93,16 +94,30 @@ bool ARCCache<K, V>::contains(const K& key) const
 
 
 template<typename K, typename V>
-std::optional<V> ARCCache<K, V>::get(const K& key) const
+std::optional<V> ARCCache<K, V>::get(const K& key)
 {
-    auto it = m_values.find(key);
-    if (it != m_values.end()) return it->second;
+    auto it = m_element_infos.find(key);
+    if (it == m_element_infos.end() || !it->second.resident)
+    {
+        return std::nullopt;
+    }
 
-    return std::nullopt;
+    Element_info& info = it->second;
+    
+    remove_from_list(info);
+    push_to_front(m_t2, key, info, List::T2);
+
+    auto vit = m_values.find(key);
+    if (vit == m_values.end() || !vit->second)
+    {
+        return std::nullopt;
+    }
+
+    return *vit->second;
 }
 
 template<typename K, typename V>
-std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& value)
+std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr(const K& key, std::unique_ptr<const V> vptr)
 {
     auto it = m_element_infos.find(key);
     const std::size_t resident_size = m_t1.size() + m_t2.size();
@@ -115,7 +130,7 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& val
 
         remove_from_list(element_info);
         push_to_front(m_t2, key, element_info, List::T2);
-        m_values[key] = value;
+        m_values[key] = std::move(vptr);
 
         return std::nullopt;
     }
@@ -130,14 +145,14 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& val
 
         m_target_t1_size = std::min(m_target_t1_size + delta, m_capacity);
 
-        std::optional<std::pair<K, V>> erased = replace(false);
+        std::optional<std::pair<K, std::unique_ptr<const V>>> erased = replace(false);
 
         Element_info& element_info = it->second;
         remove_from_list(element_info);
 
         push_to_front(m_t2, key, element_info, List::T2);
         element_info.resident = true;
-        m_values[key] = value;
+        m_values[key] = std::move(vptr);
 
         return erased;
     }
@@ -152,7 +167,7 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& val
 
         m_target_t1_size = (m_target_t1_size >= delta) ? (m_target_t1_size - delta) : 0;
 
-        std::optional<std::pair<K, V>> erased = replace(true);
+        std::optional<std::pair<K, std::unique_ptr<const V>>> erased = replace(true);
 
         Element_info& element_info = it->second;
         remove_from_list(element_info);
@@ -160,13 +175,13 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& val
         push_to_front(m_t2, key, element_info, List::T2);
 
         element_info.resident = true;
-        m_values[key] = value;
+        m_values[key] = std::move(vptr);
 
         return erased;
     }
 
     // miss
-    std::optional<std::pair<K, V>> erased;
+    std::optional<std::pair<K, std::unique_ptr<const V>>> erased;
     const std::size_t current_t1_size = m_t1.size();
     const std::size_t b1_size = m_b1.size();
     const std::size_t t2_size = m_t2.size();
@@ -194,12 +209,12 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& val
         {
             // t1 is full
             K t1_victim = m_t1.back();
-            V t1_value = m_values[t1_victim];
+            std::unique_ptr<const V> t1_vptr = std::move(m_values[t1_victim]);
 
             m_t1.pop_back();
             m_values.erase(t1_victim);
             m_element_infos.erase(t1_victim);
-            erased = std::make_pair(t1_victim, t1_value);
+            erased = std::make_pair(t1_victim, std::move(t1_vptr));
         }
     }
 
@@ -232,43 +247,33 @@ std::optional<std::pair<K, V>> ARCCache<K, V>::insert(const K& key, const V& val
     else
         push_to_front(m_t1, key, element_info, List::T1);
 
-    m_values[key] = value;
+    m_values[key] = std::move(vptr);
 
     return erased;
 }
 
 template<typename K, typename V>
-void ARCCache<K, V>::extract(const K& key)
+std::unique_ptr<const V> ARCCache<K, V>::extract_ptr(const K& key)
 {
     auto it = m_element_infos.find(key);
     if (it == m_element_infos.end() || !it->second.resident)
     {
-        return;
+        return nullptr;
     }
 
     Element_info& element_info = it->second;
 
     m_system_ghost.save(key, State{element_info.list});
 
+    auto vit = m_values.find(key);
+    auto value = (vit != m_values.end()) ? std::move(vit->second) : nullptr;
+
     remove_from_list(element_info);
     m_element_infos.erase(it);
     m_values.erase(key);
+
+    return value;
 }
-
-
-
-
-template<typename K, typename V>
-void ARCCache<K, V>::touch(const K& key)
-{
-    auto it = m_element_infos.find(key);
-    if (it == m_element_infos.end() || !it->second.resident) return;
-
-    Element_info& info = it->second;
-    remove_from_list(info);
-    push_to_front(m_t2, key, info, List::T2);
-}
-
 
 
 

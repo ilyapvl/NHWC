@@ -15,7 +15,7 @@
 #include <utility>
 
 template<typename K, typename V>
-std::unique_ptr<Cache<K, V>> make_cache(const std::string& algorithm, std::size_t capacity);
+std::unique_ptr<Cache<K, V>> add_cache(const std::string& algorithm, std::size_t capacity);
 
 template<typename K, typename V>
 class CacheSystem
@@ -26,8 +26,12 @@ private:
     std::vector<int> m_hits;
     int m_last_hit_level = 0;
 
+    
+
 public:
-    CacheSystem(std::vector<std::unique_ptr<Cache<K, V>>> levels, std::function<V(const K&)> slow_get_page);
+    CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page);
+    std::unique_ptr<Cache<K, V>> add_cache(const std::string& algorithm, std::size_t capacity);
+
     V access(const K& key);
     int get_hits(int level) const { return m_hits.at(level); }
     int get_last_hit_level() const { return m_last_hit_level; }

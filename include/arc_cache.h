@@ -40,7 +40,7 @@ private:
 
     void remove_from_list(Element_info& info);
     void push_to_front(std::list<K>& lst, const K& key, Element_info& info, List list_type);
-    std::optional<std::pair<K, V>> replace(const bool hit_in_b2);
+    std::optional<std::pair<K, std::unique_ptr<const V>>> replace(const bool hit_in_b2);
 
 public:
     ARCCache(std::size_t capacity);
@@ -48,11 +48,10 @@ public:
     using Cache<K, V>::m_values;
 
     bool contains(const K& key) const override;
-    std::optional<V> get(const K& key) const override;
-    std::optional<std::pair<K, V>> insert(const K& key, const V& value) override;
-    void extract(const K& key) override;
+    std::unique_ptr<const V> extract_ptr(const K& key) override;
+    std::optional<V> get(const K& key) override;
+    std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
 
-    void touch(const K& key) override;
 
 
 

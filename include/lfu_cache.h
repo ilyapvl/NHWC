@@ -33,14 +33,9 @@ public:
     using Cache<K, V>::m_values;
 
     bool contains(const K& key) const override;
-    void extract(const K& key) override;
-    std::optional<std::pair<K, V>> insert(const K& key, const V& value) override;
-    std::optional<V> get(const K& key) const override;
-
-    void touch(const K& key) override
-    {
-        if (contains(key)) increment_frequency(key);
-    };
+    std::unique_ptr<const V> extract_ptr(const K& key) override;
+    std::optional<V> get(const K& key) override;
+    std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
 
     void dump(std::ostream& out) const override;
 };
