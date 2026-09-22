@@ -42,8 +42,8 @@ private:
     std::size_t m_resident_count;
     std::size_t m_lir_count;
 
-    const std::size_t LIR_HIR_RATIO = 100;
-    const std::size_t MIN_HIR = 1;
+    static constexpr std::size_t LIR_HIR_RATIO = 100;
+    static constexpr std::size_t MIN_HIR = 1;
 
     std::size_t get_lir_capacity(std::size_t capacity);
     void move_to_stack_front(const K& key, Element_info& element_info);
