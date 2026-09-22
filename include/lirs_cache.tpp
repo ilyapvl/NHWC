@@ -13,7 +13,7 @@ std::size_t LIRSCache<K, V>::get_lir_capacity(std::size_t capacity)
 {
     if (capacity < 2) return 0;
 
-    return capacity - std::max<std::size_t>(1, capacity / 100);
+    return capacity - std::max<std::size_t>(MIN_HIR, capacity / LIR_HIR_RATIO);
 }
 
 template<typename K, typename V>
@@ -262,6 +262,7 @@ std::optional<V> LIRSCache<K, V>::get(const K& key)
 template<typename K, typename V>
 std::optional<std::pair<K, std::unique_ptr<const V>>> LIRSCache<K, V>::insert_ptr(const K& key, std::unique_ptr<const V> vptr)
 {
+    if (!vptr) return std::nullopt;
     if (contains(key))
     {
         m_values[key] = std::move(vptr);

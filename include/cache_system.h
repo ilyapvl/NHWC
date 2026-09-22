@@ -1,6 +1,7 @@
 #ifndef CACHE_SYSTEM_H
 #define CACHE_SYSTEM_H
 
+#include "cache.h"
 #include "lru_cache.h"
 #include "lfu_cache.h"
 #include "lirs_cache.h"
@@ -14,8 +15,10 @@
 #include <functional>
 #include <utility>
 
-template<typename K, typename V>
-std::unique_ptr<Cache<K, V>> add_cache(const std::string& algorithm, std::size_t capacity);
+enum cache_system_err
+{
+    INVALID_ALGORITHM = 1001,
+};
 
 template<typename K, typename V>
 class CacheSystem
@@ -30,7 +33,7 @@ private:
 
 public:
     CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page);
-    void add_cache(const std::string& algorithm, std::size_t capacity);
+    int add_cache(const std::string& algorithm, std::size_t capacity);
 
     V access(const K& key);
     int get_hits(int level) const { return m_hits.at(level); }

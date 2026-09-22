@@ -2,31 +2,52 @@
 #define CACHE_SYSTEM_TPP
 
 template<typename K, typename V>
-void CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capacity)
+int CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capacity)
 {
-    
+    int err = validate_capacity(algorithm, capacity);
+    if (err)
+    {
+        std::cerr << "Invalid capacity for cache " << algorithm << ": " << capacity << std::endl;
+        return err;
+    }
+
     if (algorithm == "LRU")
     {
         m_levels.push_back(std::make_unique<LRUCache<K, V>>(capacity));
+        m_hits.push_back(0);
+        return NO_ERR;
     }
     else if (algorithm == "LFU")
     {
         m_levels.push_back(std::make_unique<LFUCache<K, V>>(capacity));
+        m_hits.push_back(0);
+        return NO_ERR;
     }
     else if (algorithm == "LIRS")
     {
         m_levels.push_back(std::make_unique<LIRSCache<K, V>>(capacity));
+        m_hits.push_back(0);
+        return NO_ERR;
     }
     else if (algorithm == "ARC")
     {
         m_levels.push_back(std::make_unique<ARCCache<K, V>>(capacity));
+        m_hits.push_back(0);
+        return NO_ERR;
     }
     else if (algorithm == "2Q")
     {
         m_levels.push_back(std::make_unique<TwoQCache<K, V>>(capacity));
+        m_hits.push_back(0);
+        return NO_ERR;
+    }
+    else
+    {
+        std::cerr << "Unknown algorithm \"" << algorithm << "\"" << std::endl;
+        return INVALID_ALGORITHM;
     }
 
-    m_hits.push_back(0);
+    
 }
 
 template<typename K, typename V>

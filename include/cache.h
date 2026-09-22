@@ -15,6 +15,24 @@
 
 #include "ghost_info.h"
 
+enum cache_err
+{
+    NO_ERR = 0,
+    INVALID_CAPACITY = 1,
+};
+
+int validate_capacity(const std::string& algorithm, long long int capacity)
+{
+    if (capacity < 0 && algorithm == "LRU") return INVALID_CAPACITY;
+    else if (capacity < 1 && algorithm != "LRU") return INVALID_CAPACITY;
+
+    return NO_ERR;
+}
+
+
+
+
+
 template <typename K, typename V>
 class Cache
 {
