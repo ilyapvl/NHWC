@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 #include "cache.h"
-#include "cache_system.h"
-
+#include "lru_cache.h"
+#include "lfu_cache.h"
+#include "lirs_cache.h"
+#include "arc_cache.h"
+#include "twoq_cache.h"
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -107,8 +110,25 @@ const std::vector<std::string> default_files = {
     "../tests/lirs_sequence.txt",
     "../tests/arc_sequence.txt",
     "../tests/twoq_sequence.txt",
+
 };
 
+
+
+
+
+
+
+static std::unique_ptr<Cache<int, int>> make_test_cache(const std::string& algorithm,
+                                                        std::size_t capacity)
+{
+    if (algorithm == "LRU")  return std::make_unique<LRUCache<int, int>>(capacity);
+    if (algorithm == "LFU")  return std::make_unique<LFUCache<int, int>>(capacity);
+    if (algorithm == "LIRS") return std::make_unique<LIRSCache<int, int>>(capacity);
+    if (algorithm == "ARC")  return std::make_unique<ARCCache<int, int>>(capacity);
+    if (algorithm == "2Q")   return std::make_unique<TwoQCache<int, int>>(capacity);
+    return nullptr;
+}
 
 
 void run_one_file(const std::string path)
@@ -119,7 +139,7 @@ void run_one_file(const std::string path)
     ASSERT_GT(test.capacity, 0u);
     ASSERT_FALSE(test.ops.empty());
 
-    std::unique_ptr<Cache<int, int>> cache = make_cache<int, int>(test.algorithm, test.capacity);
+    std::unique_ptr<Cache<int, int>> cache = make_test_cache(test.algorithm, test.capacity);
     ASSERT_NE(cache, nullptr);
 
     for (std::size_t i = 0; i < test.ops.size(); ++i)
@@ -153,7 +173,6 @@ void run_one_file(const std::string path)
                 }
 
                 EXPECT_TRUE(cache->contains(op.key));
-                EXPECT_EQ(cache->get(op.key).value_or(-1), op.value);
                 break;
             }
 

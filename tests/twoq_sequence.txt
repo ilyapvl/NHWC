@@ -1,21 +1,17 @@
 algorithm 2Q
-capacity 2
+capacity 3
 
-insert 1 10 -> none
-insert 2 20 -> none
-insert 1 10 -> none
-insert 3 30 -> erase 1 10
-
-contains 1 -> false
-contains 2 -> true
-contains 3 -> true
-get 1 -> miss
-get 2 -> 20
-get 3 -> 30
-
-insert 1 10 -> erase 2 20
-contains 1 -> true
-contains 2 -> false
-contains 3 -> true
-get 1 -> 10
-get 2 -> miss
+insert 1 10 >/ none
+insert 2 20 >/ none
+insert 3 30 >/ none
+get 1 >/ 10
+get 2 >/ 20
+insert 4 40 >/ erase 1 10
+get 3 >/ 30
+insert 5 50 >/ erase 2 20
+insert 6 60 >/ erase 4 40
+get 5 >/ 50
+insert 4 40 >/ erase 3 30
+get 4 >/ 40
+extract 5 >/ 50
+insert 5 50 >/ none

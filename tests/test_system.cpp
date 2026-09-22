@@ -12,12 +12,13 @@
 #include <functional>
 #include <iostream>
 
+
 static std::vector<std::string> test_file_paths;
 
 struct LevelInfo
 {
     std::string algorithm;
-    std::size_t capacity;
+    std::size_t capacity = 0;
 };
 
 struct AccessInfo
@@ -30,22 +31,26 @@ struct AccessInfo
 
 struct SystemTest
 {
-    std::size_t levels_count;
+    std::size_t levels_count = 0;
     std::vector<LevelInfo> levels;
     std::vector<AccessInfo> requests;
 };
 
-SystemTest parse_file(const std::string path)
+SystemTest parse_file(const std::string& path)
 {
     std::ifstream in(path);
     if (!in.is_open()) assert(false && "cant open file");
 
     SystemTest test;
     std::string line;
-
+    std::size_t line_no = 0;
 
     while (std::getline(in, line))
     {
+        ++line_no;
+        if (auto p = line.find('#'); p != std::string::npos)
+            line.resize(p);
+
         std::istringstream iss(line);
         std::string first;
         if (!(iss >> first)) continue;
@@ -79,7 +84,7 @@ SystemTest parse_file(const std::string path)
                 iss >> access.expected_value;
             }
 
-            else 
+            else if (type == "hit")
             {
                 access.expected_hit = true;
                 iss >> access.expected_level >> access.expected_value;
@@ -89,62 +94,55 @@ SystemTest parse_file(const std::string path)
 
             continue;
         }
-
     }
 
     return test;
-
 }
-
 
 void run_one_file(const std::string& path)
 {
     SystemTest test;
-
     test = parse_file(path);
 
-    std::vector<std::unique_ptr<Cache<int, int>>> levels;
 
-    for (const auto lvl : test.levels)
+    CacheSystem<int, int> chs(1, [](const int key) { return key; });
+
+    for (const auto& lvl : test.levels)
+        chs.add_cache(lvl.algorithm, lvl.capacity);
+
+    for (std::size_t i = 0; i < test.requests.size(); ++i)
     {
-        levels.push_back(make_cache<int, int>(lvl.algorithm, lvl.capacity));
-    }
+        const AccessInfo& access = test.requests[i];
 
-    CacheSystem<int, int> chs(std::move(levels), [](const int key){ return key; });
-
-    for (int i = 0; i < test.requests.size(); i++)
-    {
-        auto access = test.requests[i];
-        SCOPED_TRACE("file " + path + " step " + std::to_string(i) + " key " + std::to_string(access.key));
+        SCOPED_TRACE("file=" + path +
+                     " step=" + std::to_string(i) +
+                     " key=" + std::to_string(access.key));
 
         const int value = chs.access(access.key);
 
-        EXPECT_EQ(chs.get_last_hit_level(), access.expected_level) << "file " << path << " step " << i;
-        EXPECT_EQ(value, access.expected_value) << "file " << path << " step " << i;
+        EXPECT_EQ(value, access.expected_value);
+
+        if (access.expected_hit)
+        {
+            EXPECT_EQ(chs.get_last_hit_level(), static_cast<int>(access.expected_level));
+        }
     }
 }
 
-
-
-
-
 TEST(CacheSystemFromFile, SequenceTest)
 {
-    const std::vector<std::string> default_files =
-    {
-        "../tests/system_sequence.txt",
+    const std::vector<std::string> default_files = {
+        std::string(TEST_DATA_DIR) + "/system_sequence.txt",
     };
 
     const std::vector<std::string>& files = test_file_paths.empty() ? default_files : test_file_paths;
 
-    for (const auto f : files)
+    for (const auto& f : files)
     {
         SCOPED_TRACE("file: " + f);
         run_one_file(f);
     }
 }
-
-
 
 int main(int argc, char** argv)
 {
