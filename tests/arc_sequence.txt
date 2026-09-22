@@ -1,0 +1,19 @@
+algorithm ARC
+capacity 3
+
+insert 1 10 >/ none
+insert 2 20 >/ none
+insert 3 30 >/ none
+insert 4 40 >/ erase 1 10
+insert 5 50 >/ erase 2 20
+insert 6 60 >/ erase 3 30
+get 4 >/ 40
+insert 7 70 >/ erase 5 50
+get 6 >/ 60
+insert 8 80 >/ erase 7 70
+insert 5 50 >/ erase 4 40
+get 6 >/ 60
+insert 7 70 >/ erase 5 50
+get 8 >/ 80
+extract 6 >/ 60
+insert 9 90 >/ none
