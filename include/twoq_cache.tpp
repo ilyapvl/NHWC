@@ -37,47 +37,45 @@ void TwoQCache<K, V>::trim_ghost()
 template<typename K, typename V>
 std::optional<std::pair<K, std::unique_ptr<const V>>> TwoQCache<K, V>::replace()
 {
-    std::optional<std::pair<K, std::unique_ptr<const V>>> evicted;
+    if (m_q1.size() + m_q2.size() < m_capacity) return std::nullopt;
+
+    assert(m_target_q1_size < m_capacity);
 
     K victim_key;
 
-    if (m_q1.size() + m_q2.size() >= m_capacity)
+    if (m_q1.size() > m_target_q1_size)
     {
-        if (m_q1.size() > m_target_q1_size && !m_q1.empty())
-        {
-            victim_key = m_q1.back();
-            m_q1.pop_back();
+        assert(!m_q1.empty());
 
-            Element_info& info = m_element_infos.at(victim_key);
-            m_ghost.push_front(victim_key);
+        victim_key = m_q1.back();
+        m_ghost.push_front(victim_key);
+        m_q1.pop_back();
 
-            info.it = m_ghost.begin();
-            info.list = List::GHOST;
-            info.is_resident = false;
-
-            
-            evicted = std::make_pair(victim_key, std::move(m_values[victim_key]));
-        }
-
-        else if (!m_q2.empty()) // && m_q1.size() <= m_target_q1_size
-        {
-            victim_key = m_q2.back();
-            m_q2.pop_back();
-
-            m_element_infos.erase(victim_key);
-
-            
-            evicted = std::make_pair(victim_key, std::move(m_values[victim_key]));
-        }
+        Element_info& info = m_element_infos.at(victim_key);
+        info.it = m_ghost.begin();
+        info.list = List::GHOST;
+        info.is_resident = false;
     }
 
-    m_values.erase(victim_key);
+    else
+    {
+        assert(!m_q2.empty());
+
+        victim_key = m_q2.back();
+        m_q2.pop_back();
+        m_element_infos.erase(victim_key);
+    }
+
+    auto vit = m_values.find(victim_key);
+    assert(vit != m_values.end() && vit->second);
+
+    auto vptr = std::move(vit->second);
+    m_values.erase(vit);
 
     trim_ghost();
 
-    return evicted;
+    return std::make_pair(victim_key, std::move(vptr));
 }
-
 
 
 

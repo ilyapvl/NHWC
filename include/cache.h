@@ -24,7 +24,9 @@ enum cache_err
 int validate_capacity(const std::string& algorithm, long long int capacity)
 {
     if (capacity < 0 && algorithm == "LRU") return INVALID_CAPACITY;
-    else if (capacity < 1 && algorithm != "LRU") return INVALID_CAPACITY;
+    else if (capacity < 2 && algorithm == "2Q") return INVALID_CAPACITY;
+    else if (capacity < 1 && algorithm != "LRU" && algorithm != "2Q") return INVALID_CAPACITY;
+    
 
     return NO_ERR;
 }
