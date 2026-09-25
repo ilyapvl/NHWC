@@ -5,13 +5,20 @@ ins 1 10 >/ none
 ins 2 20 >/ none
 ins 3 30 >/ none
 get 1 >/ 10
-get 2 >/ 20
-ins 4 40 >/ erase 1 10
-get 3 >/ 30
-ins 5 50 >/ erase 2 20
-ins 6 60 >/ erase 4 40
-get 5 >/ 50
-ins 4 40 >/ erase 3 30
+ins 4 40 >/ erase 2 20
+get 2 >/ miss
+ins 2 20 >/ erase 3 30
+cntn 3 >/ false
 get 4 >/ 40
-ext 5 >/ 50
-ins 5 50 >/ none
+ins 5 50 >/ erase 1 10
+cntn 1 >/ false
+get 2 >/ 20
+ins 6 60 >/ erase 4 40
+get 4 >/ miss
+get 6 >/ 60
+ext 2 >/ 20
+cntn 2 >/ false
+ext 4 >/ miss
+cntn 4 >/ false
+ins 7 70 >/ none
+get 5 >/ 50
