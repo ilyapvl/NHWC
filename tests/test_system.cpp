@@ -159,7 +159,6 @@ int main(int argc, char** argv)
         if (arg.rfind(prefix, 0) == 0)
         {
             test_file_paths.push_back(arg.substr(prefix.size()));
-            continue;
         }
     }
 
