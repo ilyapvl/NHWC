@@ -4,7 +4,7 @@
 
 template <typename K, typename V>
 OptimalCache<K, V>::OptimalCache(std::size_t capacity, const std::vector<K>& sequence)
-    : Cache<K, V>(capacity), m_sequence(sequence)
+    : m_capacity(capacity), m_sequence(sequence)
 {
     build_future_positions();
 }
@@ -22,6 +22,8 @@ void OptimalCache<K, V>::build_future_positions()
 template <typename K, typename V>
 int OptimalCache<K, V>::simulate()
 {
+    if (m_capacity == 0) return 0;
+    
     int hits = 0;
 
     for (std::size_t i = 0; i < m_sequence.size(); i++)
@@ -37,48 +39,34 @@ int OptimalCache<K, V>::simulate()
             it_future->second.pop_front();
         }
 
-        if (m_key_to_next_use.find(key) != m_key_to_next_use.end())
+        int new_next_use = std::numeric_limits<int>::max();
+        if (it_future != m_future_positions.end() && !it_future->second.empty())
+        {
+            new_next_use = it_future->second.front();
+        }
+
+        auto present_it = m_key_to_next_use.find(key);
+
+        if (present_it != m_key_to_next_use.end())
         {
             hits++;
 
             int old_next = m_key_to_next_use[key];
-            m_resident_by_next_use.erase(old_next);
-            m_key_to_next_use.erase(key);
+            m_resident_by_next_use.erase({old_next, key});
+            m_key_to_next_use.erase(present_it);
 
-            int new_next = std::numeric_limits<int>::max();
-
-            if (it_future != m_future_positions.end() && !it_future->second.empty())
-            {
-                new_next = it_future->second.front();
-            }
-            m_key_to_next_use[key] = new_next;
-            m_resident_by_next_use[key] = key;
         }
 
-        else
+        else if (m_key_to_next_use.size() == m_capacity && !m_resident_by_next_use.empty())
         {
-            if (m_key_to_next_use.size() == m_capacity)
-            {
-                auto it_last_resident = m_resident_by_next_use.end();
-                it_last_resident--;
-
-                K element_to_erase = it_last_resident->second;
-                m_key_to_next_use.erase(element_to_erase);
-                m_resident_by_next_use.erase(element_to_erase);
-                m_values.erase(element_to_erase);
-            }
-            
-
-
-            int new_next_use = std::numeric_limits<int>::max();
-
-            if (it_future != m_future_positions.end() && !it_future->second.empty())
-            {
-                new_next_use = it_future->second.front();
-            }
-            m_key_to_next_use[key] = new_next_use;
-            m_resident_by_next_use[new_next_use] = key;
+            auto last = std::prev(m_resident_by_next_use.end());
+            K victim = last->second;
+            m_resident_by_next_use.erase(last);
+            m_key_to_next_use.erase(victim);
         }
+            
+        m_key_to_next_use[key] = new_next_use;
+        m_resident_by_next_use.insert({new_next_use, key});
 
 
 
@@ -87,30 +75,6 @@ int OptimalCache<K, V>::simulate()
 
     return hits;
 }
-
-
-
-template<typename K, typename V>
-bool OptimalCache<K, V>::contains(const K& key) const
-{
-    return m_key_to_next_use.find(key) != m_key_to_next_use.end();
-}
-
-template<typename K, typename V>
-std::optional<V> OptimalCache<K, V>::get(const K& key)
-{
-    return std::nullopt;
-}
-
-template<typename K, typename V>
-std::optional<std::pair<K, std::unique_ptr<const V>>> OptimalCache<K, V>::insert_ptr(const K& key, std::unique_ptr<const V> vptr)
-{
-    return std::nullopt;
-}
-
-template<typename K, typename V>
-std::unique_ptr<const V> OptimalCache<K, V>::extract_ptr(const K& key) {};
-
 
 
 template<typename K, typename V>
@@ -123,16 +87,15 @@ void OptimalCache<K, V>::dump(std::ostream& out) const
 
     out << "    resident [key(next use position)]: ";
     bool first = true;
-    for (const auto& [key, _] : m_is_resident) {
+    for (const auto& [key, next] : m_key_to_next_use)
+    {
         if (!first) out << ", ";
         first = false;
 
-        out << key;
-        auto it = m_future_positions.find(key);
-        if (it != m_future_positions.end() && !it->second.empty())
-            out << "(next@" << it->second.front() << ")";
+        if (next == std::numeric_limits<int>::max())
+            out << key << "(never)";
         else
-            out << "(never)";
+            out << key << "(next@" << next << ")";
     }
     out << '\n';
 }
