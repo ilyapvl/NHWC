@@ -362,6 +362,72 @@ and restores them if an element is returned quickly enough. `SystemGhost` is LRU
 
 
 
+
+
+## Tests
+
+Tests are built with GoogleTest and run via CTest:
+
+    ctest --output-on-failure
+
+The suite is split into three groups.
+
+### Unit tests for `OptimalCache` (`test_optimal_cache.cpp`)
+
+Self-contained `TEST` cases with hardcoded sequences. No external files needed.
+
+### Scenario tests for individual caches (`test_cache.cpp`)
+
+Each test is a plain-text file describing a single algorithm run
+
+Header lines:
+
+    algorithm <LRU|LFU|LIRS|ARC|2Q>
+    capacity  <N>
+
+Operation lines have the form `<op> <key> [<value>] >/ <expected>`:
+
+- `ins <key> <value> >/ none` — insertion returns no victim.
+- `ins <key> <value> >/ erase <evicted_key> <evicted_value>` — insertion
+  evicts a specific entry.
+- `get <key> >/ <value>` or `get <key> >/ miss`.
+- `ext <key> >/ <value>` or `ext <key> >/ miss`.
+- `cntn <key> >/ true` or `cntn <key> >/ false`.
+
+Included files: `lru_sequence.txt`, `lfu_sequence.txt`,
+`lirs_sequence.txt`, `arc_sequence.txt`, `twoq_sequence.txt`. Extra
+scenarios can be supplied on the command line:
+
+    ./build/test_cache file=path/to/my_sequence.txt
+
+The `file=` prefix is repeatable. When no `file=` argument is given, the
+built-in list above is used.
+
+### Scenario tests for `CacheSystem` (`test_system.cpp`)
+
+Same idea, but the file describes a whole multi-level system
+
+    levels <N>
+    level <algo> <capacity>
+    ...
+    access <key> -> hit  <level> <value>
+    access <key> -> miss <value>
+
+The runner builds the system, replays each `access`, and checks both the
+returned value and `get_last_hit_level()`. The default input is
+`system_sequence.txt`; additional files are passed the same way:
+
+    ./build/test_system --file=path/to/another_system.txt
+
+### Debugging a failure
+
+`test_cache.cpp` wraps each step in `SCOPED_TRACE` with the file, step
+index, operation and key, so the failing line is visible in the output.
+On the first failing assertion the cache state is dumped to `stderr`
+
+
+
+
 ## Cache configuration search (cache_bench)
 
 The project also has `cache_bench`, a driver that, given a workload and
