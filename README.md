@@ -256,9 +256,7 @@ without copying V
 #### `std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> value)`
 
 The value is passed and returned through
-unique_ptr<const V>, so no copy of V is made. If value is null, the
-call is a no-op that returns nullopt — this is a defensive check, not a
-supported mode of operation.
+unique_ptr<const V>, so no copy of V is made
 
 
 #### `std::unique_ptr<const V> extract_ptr(const K& key)`
@@ -270,7 +268,9 @@ Extracts an element from cache.
 
 #### `void dump(std::ostream& out) const`
 
-Prints a snapshot of the cache's internal structures
+Prints a snapshot of the cache's internal structures.
+
+**Note:** Since `OptimalCache` runs all sequence as a whole, the `dump` function makes sense only inside the `simulate` loop
 
 
 
@@ -282,7 +282,6 @@ OptimalCache(std::size_t capacity, const std::vector<K>& sequence)
 Stores the entire request sequence for offline analysis. Builds an index
 from key to the list of positions where it appears. Requires
 capacity >= 1; smaller values are rejected by validate_capacity
-before the constructor is called.
 
 
 #### `std::size_t simulate()`
@@ -343,7 +342,7 @@ between them
 
 1. The element starts at level 0 with its value.
 2. `insert_ptr` puts the element in level 0. If level 0 is not full yet,
-   it returns `nullopt` and the cascade stops — the element is safely
+   it returns `nullopt` and the cascade stops - the element is safely
    resident and no further level needs to see it.
 3. If level 0 was full, its own replacement policy evicts a victim. The
    victim is returned as `(K, unique_ptr<const V>)` and becomes the new
