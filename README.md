@@ -362,3 +362,108 @@ and restores them if an element is returned quickly enough. `SystemGhost` is LRU
 
 
 
+## Cache configuration search (cache_bench)
+
+The project also has `cache_bench`, a driver that, given a workload and
+a multi-level topology, searches for a good per-level algorithm assignment
+using hill climbing
+
+### Workloads
+
+Workloads are described in a plain text file, one spec per line:
+
+    <type> <name> key=value ...
+
+Supported types:
+
+- `uniform` — keys drawn uniformly from `[0, key_max)`.
+- `zipf` — single Zipf distribution with exponent `alpha`.
+- `zipfmulti` — alternating Zipf phases;
+  parameters `alphas=0.7,1.1,1.5` and `ops_per_phase=N`.
+- `hotcold` — mixture: `hot_ratio` of accesses go to one of `hot_keys`
+  hot keys, the rest to one of `cold_keys` cold keys.
+- `scan` - hot keys plus a sequential scan of
+  `scan_length` keys.
+- `phase` — `num_phases` phases; each phase works
+  over `keys_per_phase` new keys.
+
+Example workloads.txt file:
+
+    uniform  u1    key_max=100000
+    zipf     z1    key_max=100000 alpha=0.9
+    hotcold  hc1   hot_ratio=0.8 hot_keys=100 cold_keys=100000
+    scan     s1    hot_ratio=0.5 hot_keys=100 scan_length=1000
+    phase    p1    phases=10 keys_per_phase=1000
+
+### Objective
+
+Each candidate configuration is evaluated by `run()` from `runner.cpp`.
+It feeds the sequence through a `CacheSystem` and accumulates simulated
+cost in nanoseconds:
+
+- a hit at level `i` costs the prefix sum of latencies `T0..Ti`;
+- a miss costs the sum of all level latencies plus `miss_ns`;
+- every access adds `overhead_ns`.
+
+The objective minimised by the search is `sim_ns_per_op`.
+
+### Search
+
+`hill_climb` explores the neighbourhood of the current
+best configuration:
+
+- replace one level's algorithm with any other from the pool;
+- append a new level (up to `max_levels`);
+- drop the last level (down to `min_levels`).
+
+Neighbours are deduplicated by their string form. The search stops after
+`--max-iter` iterations or after `no_improvement_stop` (currently fixed
+to 1) non-improving iterations.
+
+The benchmark restarts the hill climb from every algorithm in the pool
+and keeps the best result per workload.
+
+### CLI
+
+    cache_bench --workloads PATH \
+                -L0 <cap> [-L1 <cap> ...] \
+                -T0 <ns>  [-T1 <ns>  ...] \
+                --miss-ns <ns> [options]
+
+Required:
+
+- `--workloads PATH` — file with workload specs
+- `-L{i} N` — capacity of level `i`
+- `-T{i} N` — latency of level `i` in nanoseconds
+- `--miss-ns N` — cost of a slow_get_page() access
+
+Optional:
+
+- `--overhead-ns N` — per-op overhead (default 20).
+- `--min-levels N` — minimum number of levels (default 1).
+- `--max-iter N` — hill-climb iteration cap per restart (default 20).
+- `--ops N` — sequence length (default 1 000 000).
+- `--seed S` — RNG seed (default 1234).
+- `--algorithm NAME` — restrict the algorithm pool (repeatable).
+- `--csv PATH` — append the search log to a CSV file.
+
+### Output
+
+For every workload the tool prints the best configuration found, the
+simulated cost, the achieved hit rate, the Belady optimum for the same
+total capacity, and the relative gap. A summary table is printed at the
+end. Example:
+    
+    workload      algorithms               levels   hit_rate   opt_rate   sim_ns/op
+    u_15k         2Q/LRU/LIRS                   3     0.1405     0.4760    682647.6
+    z_50k_09      LIRS/ARC/ARC                  3     0.5674     0.6675    374659.0
+    z_swing       LIRS/ARC/ARC                  3     0.6610     0.7402    295797.8
+    hc_oltp       LIRS/LFU/LFU                  3     0.1818     0.4423    659976.4
+    scan_narrow   LFU/ARC                       2     0.4992     0.4992    485918.6
+    scan_wide     LFU/LFU/LFU                   3     0.1826     0.4377    659584.5
+    phase_3       2Q/LIRS/LRU                   3     0.4184     0.7530    529836.6
+
+
+
+
+
