@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <functional>
 #include <utility>
+#include <iostream>
 
 enum cache_system_err
 {

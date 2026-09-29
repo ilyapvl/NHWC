@@ -12,6 +12,7 @@
 #include <limits>
 #include <cstddef>
 #include <utility>
+#include <ostream>
 
 #include "ghost_info.h"
 
