@@ -1,18 +1,18 @@
 algorithm LIRS
 capacity 3
 
-insert 1 10 >/ none
-insert 2 20 >/ none
-insert 3 30 >/ none
-insert 4 40 >/ erase 3 30
+ins 1 10 >/ none
+ins 2 20 >/ none
+ins 3 30 >/ none
+ins 4 40 >/ erase 3 30
 get 1 >/ 10
 get 3 >/ miss
 get 4 >/ 40
-insert 5 50 >/ erase 2 20
+ins 5 50 >/ erase 2 20
 get 5 >/ 50
-extract 4 >/ 40
-insert 4 40 >/ none
-insert 6 60 >/ erase 1 10
+ext 4 >/ 40
+ins 4 40 >/ none
+ins 6 60 >/ erase 1 10
 get 5 >/ 50
 get 4 >/ 40
 get 6 >/ 60

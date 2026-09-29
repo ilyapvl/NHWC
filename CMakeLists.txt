@@ -27,6 +27,26 @@ target_sources(main PRIVATE
     include/cache_system.tpp
 )
 
+
+
+
+add_executable(cache_bench
+    bench/main.cpp
+    bench/workloads.cpp
+    bench/runner.cpp
+    bench/search.cpp
+)
+target_include_directories(cache_bench PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_compile_options(cache_bench PRIVATE -O3)
+
+
+
+
+
+
+
+
+
 include(FetchContent)
 FetchContent_Declare(
     googletest
@@ -47,7 +67,7 @@ target_compile_definitions(cache_test PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests"
 )
 
-
+add_test(NAME cache_test COMMAND cache_test)
 
 
 
@@ -67,11 +87,24 @@ add_test(NAME cache_system_test COMMAND cache_system_test)
 
 
 
+add_executable(optimal_cache_test
+    tests/test_optimal_cache.cpp
+)
+target_include_directories(optimal_cache_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(optimal_cache_test PRIVATE GTest::gtest)
+
+target_compile_definitions(optimal_cache_test PRIVATE
+    TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests"
+)
+
+add_test(NAME optimal_cache_test COMMAND optimal_cache_test)
+
+
 
 
 
 include(GoogleTest)
-gtest_discover_tests(cache_test
-    DISCOVERY_MODE PRE_TEST
-)
+
 

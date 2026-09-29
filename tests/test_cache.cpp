@@ -13,6 +13,27 @@
 
 static std::vector<std::string> test_file_paths;
 
+
+
+class DumpOnFailure
+{
+public:
+    DumpOnFailure(Cache<int, int>& cache) : m_cache(cache) {}
+
+    ~DumpOnFailure()
+    {
+        if (!::testing::Test::HasFailure() || s_already_reported) return;
+        s_already_reported = true;
+        m_cache.dump(std::cerr);
+    }
+
+private:
+    Cache<int, int>& m_cache;
+    static inline bool s_already_reported = false;
+};
+
+
+
 struct Operation
 {
     enum class Func { Insert, Get, Extract, Contains, Invalid };
@@ -38,10 +59,10 @@ struct TestCase
 
 Operation::Func func_from_string(const std::string s)
 {
-    if (s == "insert") return Operation::Func::Insert;
+    if (s == "ins") return Operation::Func::Insert;
     else if (s == "get") return Operation::Func::Get;
-    else if (s == "extract") return Operation::Func::Extract;
-    else if (s == "contains") return Operation::Func::Contains;
+    else if (s == "ext") return Operation::Func::Extract;
+    else if (s == "cntn") return Operation::Func::Contains;
 
     return Operation::Func::Invalid;
 }
@@ -93,7 +114,7 @@ TestCase parse_file(const std::string path, TestCase& test)
 
         iss >> op.expected;
 
-        if (op.expected == "erase")
+        if (op.expected == "erase" && op.func == Operation::Func::Insert)
         {
             iss >> op.erase_key >> op.erase_value;
         }
@@ -144,6 +165,8 @@ void run_one_file(const std::string path)
 
     for (std::size_t i = 0; i < test.ops.size(); ++i)
     {
+        DumpOnFailure guard(*cache);
+
         const Operation& op = test.ops[i];
 
         SCOPED_TRACE("step " + std::to_string(i)+ " op " + std::to_string(static_cast<int>(op.func)) + " key " + std::to_string(op.key));
@@ -198,7 +221,19 @@ void run_one_file(const std::string path)
 
         case Operation::Func::Extract:
             {
-                cache->extract(op.key);
+                auto v = cache->extract(op.key);
+                if (op.expected == "miss")
+                {
+                    EXPECT_FALSE(v.has_value());
+                }
+                
+                else
+                {
+                    ASSERT_TRUE(v.has_value());
+
+                    EXPECT_EQ(v.value(), std::stoi(op.expected));
+                }
+
                 break;
             }
 

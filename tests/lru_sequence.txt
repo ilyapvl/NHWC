@@ -1,24 +1,24 @@
 algorithm LRU
 capacity 2
 
-insert 1 10 >/ none
-insert 2 20 >/ none
-insert 1 10 >/ none
-insert 3 30 >/ erase 2 20
+ins 1 10 >/ none
+ins 2 20 >/ none
+ins 1 10 >/ none
+ins 3 30 >/ erase 2 20
 get 1 >/ 10
 get 2 >/ miss
-extract 1 >/ 10
-contains 1 >/ false
-contains 3 >/ true
+ext 1 >/ 10
+cntn 1 >/ false
+cntn 3 >/ true
 
-insert 2 20 >/ none
-insert 4 40 >/ erase 3 30
+ins 2 20 >/ none
+ins 4 40 >/ erase 3 30
 get 2 >/ 20
 get 3 >/ miss
 
-insert 2 30 >/ none
-insert 5 50 >/ erase 4 40
-insert 6 60 >/ erase 2 30
+ins 2 30 >/ none
+ins 5 50 >/ erase 4 40
+ins 6 60 >/ erase 2 30
 
 get 2 >/ miss
 get 5 >/ 50
