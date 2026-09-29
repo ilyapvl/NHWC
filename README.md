@@ -45,6 +45,8 @@ GoogleTest is fetched automatically via CMake's
 
 ```
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cd build
+make
 ```
 
 
