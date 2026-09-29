@@ -33,7 +33,7 @@ Every algorithm inherits from `Cache<K, V>` and
 
 ### Requirements
 
-- CMake 3.10 or newer
+- CMake 3.24 or newer
 - A C++20 compiler
 
 GoogleTest is fetched automatically via CMake's
