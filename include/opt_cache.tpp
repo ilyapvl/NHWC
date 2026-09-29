@@ -81,7 +81,7 @@ template<typename K, typename V>
 void OptimalCache<K, V>::dump(std::ostream& out) const
 {
     out << "OptimalCache (capacity=" << m_capacity
-        << ", resident=" << m_is_resident.size()
+        << ", resident=" << m_key_to_next_use.size()
         << ", next_index=" << m_current_index
         << "/" << m_sequence.size() << ")\n";
 
