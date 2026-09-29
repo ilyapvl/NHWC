@@ -102,6 +102,7 @@ for the same sequence.
 ## Project structure
 
 
+
 ```
 .
 ├── CMakeLists.txt
@@ -111,15 +112,29 @@ for the same sequence.
 │   ├── cache.tpp
 │   ├── cache_system.h
 │   ├── cache_system.tpp
-│   ├── lru_cache.h / .tpp
-│   ├── lfu_cache.h / .tpp
-│   ├── lirs_cache.h / .tpp
-│   ├── arc_cache.h / .tpp
-│   ├── twoq_cache.h / .tpp
-│   ├── opt_cache.h / .tpp
+│   ├── lru_cache.h
+│   ├── lru_cache.tpp
+│   ├── lfu_cache.h
+│   ├── lfu_cache.tpp
+│   ├── lirs_cache.h
+│   ├── lirs_cache.tpp
+│   ├── arc_cache.h
+│   ├── arc_cache.tpp
+│   ├── twoq_cache.h
+│   ├── twoq_cache.tpp
+│   ├── opt_cache.h
+│   ├── opt_cache.tpp
 │   └── ghost_info.h
 ├── src/
 │   └── main.cpp
+├── bench/
+│   ├── main.cpp
+│   ├── runner.h
+│   ├── runner.cpp
+│   ├── search.h
+│   ├── search.cpp
+│   ├── workloads.h
+│   └── workloads.cpp
 └── tests/
     ├── test_optimal_cache.cpp
     ├── test_system.cpp
@@ -130,6 +145,7 @@ for the same sequence.
     ├── arc_sequence.txt
     ├── twoq_sequence.txt
     └── system_sequence.txt
+
 ```
 
 
@@ -270,7 +286,7 @@ Extracts an element from cache.
 
 Prints a snapshot of the cache's internal structures.
 
-**Note:** Since `OptimalCache` runs all sequence as a whole, the `dump` function makes sense only inside the `simulate` loop
+**Note:** Since `OptimalCache` runs all sequence as a whole, the `dump` function makes sense only inside the its `simulate` loop
 
 
 
@@ -478,8 +494,8 @@ The objective minimised by the search is `sim_ns_per_op`.
 best configuration:
 
 - replace one level's algorithm with any other from the pool;
-- append a new level (up to `max_levels`);
-- drop the last level (down to `min_levels`).
+- append a new level
+- drop the last level
 
 Neighbours are deduplicated by their string form. The search stops after
 `--max-iter` iterations or after `no_improvement_stop` (currently fixed
@@ -505,7 +521,6 @@ Required:
 Optional:
 
 - `--overhead-ns N` — per-op overhead (default 20).
-- `--min-levels N` — minimum number of levels (default 1).
 - `--max-iter N` — hill-climb iteration cap per restart (default 20).
 - `--ops N` — sequence length (default 1 000 000).
 - `--seed S` — RNG seed (default 1234).
