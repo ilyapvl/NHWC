@@ -27,6 +27,26 @@ target_sources(main PRIVATE
     include/cache_system.tpp
 )
 
+
+
+
+add_executable(cache_bench
+    bench/main.cpp
+    bench/workloads.cpp
+    bench/runner.cpp
+    bench/search.cpp
+)
+target_include_directories(cache_bench PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_compile_options(cache_bench PRIVATE -O3)
+
+
+
+
+
+
+
+
+
 include(FetchContent)
 FetchContent_Declare(
     googletest
