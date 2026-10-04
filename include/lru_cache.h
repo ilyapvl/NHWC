@@ -28,6 +28,10 @@ public:
     std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
 
     void dump(std::ostream& out) const override;
+
+
+    const std::list<K>& debug_order() const { return m_order; }
+    const std::unordered_map<K, typename std::list<K>::iterator>& debug_positions() const { return m_positions; }
 };
 
 #include "lru_cache.tpp"

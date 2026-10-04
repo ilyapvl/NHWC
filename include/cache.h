@@ -74,6 +74,12 @@ public:
 
 
     virtual void dump(std::ostream& out) const = 0;
+
+
+    const std::unordered_map<K, std::unique_ptr<const V>>& debug_values() const
+    {
+        return m_values;
+    }
 };
 
 #include "cache.tpp"
