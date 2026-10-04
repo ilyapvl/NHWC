@@ -105,6 +105,16 @@ add_test(NAME optimal_cache_test COMMAND optimal_cache_test)
 
 
 
+
+add_executable(test_unit_lru tests/test_unit_lru.cpp)
+target_include_directories(test_unit_lru PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(test_unit_lru PRIVATE GTest::gtest)
+add_test(NAME unit_lru COMMAND test_unit_lru)
+
+
+
 include(GoogleTest)
 
 
