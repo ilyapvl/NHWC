@@ -59,6 +59,22 @@ public:
 
         return s;
     }
+
+
+    bool debug_contains(const K& key) const
+    {
+        return m_map.find(key) != m_map.end();
+    }
+
+    std::optional<S> debug_get(const K& key) const
+    {
+        auto it = m_map.find(key);
+        if (it == m_map.end()) return std::nullopt;
+        return it->second.state;
+    }
+
+    std::size_t debug_size() const { return m_map.size(); }
+    std::size_t debug_capacity() const { return m_size; }
 };
 
 #endif

@@ -113,6 +113,13 @@ target_include_directories(test_unit_lru PRIVATE
 target_link_libraries(test_unit_lru PRIVATE GTest::gtest)
 add_test(NAME unit_lru COMMAND test_unit_lru)
 
+add_executable(test_unit_lfu tests/test_unit_lfu.cpp)
+target_include_directories(test_unit_lfu PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(test_unit_lfu PRIVATE GTest::gtest)
+add_test(NAME unit_lfu COMMAND test_unit_lfu)
+
 
 
 include(GoogleTest)

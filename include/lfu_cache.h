@@ -38,6 +38,33 @@ public:
     std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
 
     void dump(std::ostream& out) const override;
+
+
+    
+
+    const std::map<int, std::list<K>>& debug_freq_to_keys() const
+    {
+        return m_freq_to_keys;
+    }
+
+    const std::unordered_map<K, std::pair<int, typename std::list<K>::iterator>>& debug_key_to_pair() const
+    {
+        return m_key_to_pair;
+    }
+
+    bool debug_in_ghost(const K& key) const
+    {
+        return m_ghost_info.debug_contains(key);
+    }
+
+    int debug_ghost_freq(const K& key) const
+    {
+        auto s = m_ghost_info.debug_get(key);
+        return s ? s->freq : 0;
+    }
+
+    std::size_t debug_ghost_size() const { return m_ghost_info.debug_size(); }
+    std::size_t debug_ghost_capacity() const { return m_ghost_info.debug_capacity(); }
 };
 
 #include "lfu_cache.tpp"
