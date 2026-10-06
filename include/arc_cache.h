@@ -12,8 +12,11 @@
 template<typename K, typename V>
 class ARCCache : public Cache<K, V>
 {
-private:
+public:
     enum class List { None, T1, T2, B1, B2 };
+    
+private:
+    
 
     struct Element_info
     {
@@ -56,6 +59,31 @@ public:
 
 
     void dump(std::ostream& out) const override;
+
+
+
+    const std::list<K>& debug_t1() const { return m_t1; }
+    const std::list<K>& debug_t2() const { return m_t2; }
+    const std::list<K>& debug_b1() const { return m_b1; }
+    const std::list<K>& debug_b2() const { return m_b2; }
+
+    const std::unordered_map<K, Element_info>& debug_element_infos() const
+    {
+        return m_element_infos;
+    }
+
+    std::size_t debug_target_t1_size() const { return m_target_t1_size; }
+
+    bool debug_in_ghost(const K& key) const
+    {
+        return m_system_ghost.debug_contains(key);
+    }
+
+    bool debug_ghost_is_t2(const K& key) const
+    {
+        auto s = m_system_ghost.debug_get(key);
+        return s && s->list == List::T2;
+    }
 };
 
 #include "arc_cache.tpp"
