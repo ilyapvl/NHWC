@@ -38,7 +38,18 @@ struct WorkloadSpec
 };
 
 std::string workload_type_name(WorkloadType type);
-std::vector<WorkloadSpec> load_workload_specs(const std::string& path, std::size_t n);
-void generate(const Workload& w, std::uint32_t seed, std::vector<int>& out);
+bool workload_type_from_string(const std::string& s, WorkloadType& out);
+bool load_workload_specs(const std::string& path, std::size_t n, std::vector<WorkloadSpec>& out, std::string& err);
+
+
+// key_max > 0, alpha >= 0, alphas non-empty and > 0
+// ops_per_phase > 0 for ZipfMulti
+// hot_ratio in [0,1], hot_keys > 0, cold_keys > 0 for HotCold
+// hot_ratio in [0,1], hot_keys > 0, scan_length > 0 for ScanStress
+// num_phases > 0, keys_per_phase > 0 for PhaseShift
+bool validate_workload(const Workload& w, std::string& err);
+
+// false if the workload is not validated
+bool generate(const Workload& w, std::uint32_t seed, std::vector<int>& out);
 
 #endif

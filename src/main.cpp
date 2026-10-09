@@ -11,38 +11,59 @@
 
 int slow_get_page(int key)
 {
-    // for (int i = 0; i < 1000000000; i += 2) i--;
     return key / 2;
 }
 
 
-bool read_config(const std::string filename, int& level_count,
+bool read_config(const std::string& filename, int& level_count,
     std::vector<std::string>& algorithms, std::vector<std::size_t>& capacities,
-    int& num_requests, std::vector<int>& requests)
+    int& num_requests, std::vector<int>& requests, std::string& err)
 {
     std::ifstream config(filename);
     if (!config.is_open())
     {
-        std::cerr << "Failed to open file" << std::endl;
-
-        return 1;
+        err = "cannot open file: " + filename;
+        return false;
     }
 
     if (!(config >> level_count))
     {
-        std::cerr << "Failed to read level count" << std::endl;
-
-        return 1;
+        err = "missing level count";
+        return false;
     }
 
+    if (level_count <= 0)
+    {
+        err = "level count < 1";
+        return false;
+    }
+
+    static const char* known_algorithms[] = {"LRU", "LFU", "LIRS", "ARC", "2Q"};
 
     algorithms.resize(level_count);
     for (int i = 0; i < level_count; i++)
     {
         if (!(config >> algorithms[i]))
         {
-            std::cerr << "Failed to read algorithms" << std::endl;
-            return 1;
+            err = "missing algorithm for level " + std::to_string(i);
+            return false;
+        }
+
+        bool known = false;
+
+        for (const char* x : known_algorithms)
+        {
+            if (algorithms[i] == x)
+            {
+                known = true;
+                break;
+            }
+        }
+
+        if (!known)
+        {
+            err = "unknown algorithm at level " + std::to_string(i) + ": '" + algorithms[i] + "'";
+            return false;
         }
     }
 
@@ -51,14 +72,27 @@ bool read_config(const std::string filename, int& level_count,
     {
         if (!(config >> capacities[i]))
         {
-            std::cerr << "Failed to read capacities" << std::endl;
+            err = "missing capacity for level " + std::to_string(i);
+
+            return false;
+        }
+
+        const int e = validate_capacity(algorithms[i], capacities[i]);
+
+        if (e != NO_ERR)
+        {
+            err = "invalid capacity for " + algorithms[i]
+                + " at level " + std::to_string(i)
+                + ": " + std::to_string(capacities[i]);
+
+            
             return false;
         }
     }
 
     if (!(config >> num_requests))
     {
-        std::cerr << "Failed to read requests count" << std::endl;
+        err = "missing request count";
 
         return false;
     }
@@ -68,7 +102,7 @@ bool read_config(const std::string filename, int& level_count,
     {
         if (!(config >> requests[i]))
         {
-            std::cerr << "Failed to read requests" << std::endl;
+            err = "missing request #" + std::to_string(i);
             return false;
         }
     }
@@ -76,36 +110,32 @@ bool read_config(const std::string filename, int& level_count,
     return true;
 }
 
+
+
 int main(const int argc, const char* argv[])
 {
     if (argc < 2)
     {
-        std::cout << "No file specified" << std::endl;
+        std::cerr << "No file specified" << std::endl;
 
-        return 1;
+        return 2;
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     int level_count = 0;
-    std::vector<std::string> algorithms = {};
-    std::vector<std::size_t> capacities = {};
-    std::vector<std::unique_ptr<Cache<int, int>>> levels = {};
-    int num_requests = {};
-    std::vector<int> requests = {};
+    int num_requests = 0;
 
-    if(!read_config(argv[1], level_count, algorithms, capacities, num_requests, requests)) return 1;
+    std::vector<std::string> algorithms;
+    std::vector<std::size_t> capacities;
+    std::vector<int> requests;
+
+    std::string err;
+    if (!read_config(argv[1], level_count, algorithms, capacities, num_requests, requests, err))
+    {
+        std::cerr << "error: " << err << '\n';
+
+        return 1;
+    }
 
     
 
