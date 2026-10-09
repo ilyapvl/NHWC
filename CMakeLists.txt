@@ -105,7 +105,7 @@ add_test(NAME optimal_cache_test COMMAND optimal_cache_test)
 
 
 
-
+# LRU
 add_executable(test_unit_lru tests/test_unit_lru.cpp)
 target_include_directories(test_unit_lru PRIVATE
     ${CMAKE_SOURCE_DIR}/include
@@ -113,6 +113,8 @@ target_include_directories(test_unit_lru PRIVATE
 target_link_libraries(test_unit_lru PRIVATE GTest::gtest)
 add_test(NAME unit_lru COMMAND test_unit_lru)
 
+
+# LFU
 add_executable(test_unit_lfu tests/test_unit_lfu.cpp)
 target_include_directories(test_unit_lfu PRIVATE
     ${CMAKE_SOURCE_DIR}/include
@@ -120,6 +122,8 @@ target_include_directories(test_unit_lfu PRIVATE
 target_link_libraries(test_unit_lfu PRIVATE GTest::gtest)
 add_test(NAME unit_lfu COMMAND test_unit_lfu)
 
+
+# LIRS
 add_executable(test_unit_lirs tests/test_unit_lirs.cpp)
 target_include_directories(test_unit_lirs PRIVATE
     ${CMAKE_SOURCE_DIR}/include
@@ -127,12 +131,23 @@ target_include_directories(test_unit_lirs PRIVATE
 target_link_libraries(test_unit_lirs PRIVATE GTest::gtest)
 add_test(NAME unit_lirs COMMAND test_unit_lirs)
 
+
+# ARC
 add_executable(test_unit_arc tests/test_unit_arc.cpp)
 target_include_directories(test_unit_arc PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(test_unit_arc PRIVATE GTest::gtest)
 add_test(NAME unit_arc COMMAND test_unit_arc)
+
+
+#2Q
+add_executable(test_unit_twoq tests/test_unit_twoq.cpp)
+target_include_directories(test_unit_twoq PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(test_unit_twoq PRIVATE GTest::gtest)
+add_test(NAME unit_twoq COMMAND test_unit_twoq)
 
 
 
