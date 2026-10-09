@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "arc_cache.h"
 
+#include <algorithm>
 #include <iostream>
 #include <random>
 #include <string>
@@ -9,6 +10,29 @@
 
 
 
+
+
+
+constexpr int ARC_UNKNOWN = -1;
+constexpr int ARC_NONE    = 0;
+constexpr int ARC_T1      = 1;
+constexpr int ARC_T2      = 2;
+constexpr int ARC_B1      = 3;
+constexpr int ARC_B2      = 4;
+
+const char* tag_name(int tag)
+{
+    switch (tag)
+    {
+        case ARC_UNKNOWN: return "UNKNOWN";
+        case ARC_NONE:    return "NONE";
+        case ARC_T1:      return "T1";
+        case ARC_T2:      return "T2";
+        case ARC_B1:      return "B1";
+        case ARC_B2:      return "B2";
+    }
+    return "?";
+}
 
 
 class DumpOnFailure
@@ -29,6 +53,7 @@ private:
 };
 
 
+
 void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
 {
     SCOPED_TRACE(what);
@@ -37,17 +62,14 @@ void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
     const auto& t2    = c.debug_t2();
     const auto& b1    = c.debug_b1();
     const auto& b2    = c.debug_b2();
-    const auto& infos = c.debug_element_infos();
     const auto& vals  = c.debug_values();
 
     const std::size_t cap = c.capacity();
 
     // arc lists sizes
-    EXPECT_LE(t1.size() + t2.size(), cap)   << "|T1| + |T2| > capacity (resident set too large)";
-    EXPECT_LE(t1.size() + b1.size(), cap)   << "|T1| + |B1| > capacity";
-
-    EXPECT_LE(t1.size() + t2.size() + b1.size() + b2.size(), 2 * cap) << "total (T1+T2+B1+B2) > 2 * capacity";
-    
+    EXPECT_LE(t1.size() + t2.size(), cap) << "|T1| + |T2| > capacity";
+    EXPECT_LE(t1.size() + b1.size(), cap) << "|T1| + |B1| > capacity";
+    EXPECT_LE(t1.size() + t2.size() + b1.size() + b2.size(), 2 * cap) << "|T1| + |T2| + |B1| + |B2| > 2 * capacity";
     EXPECT_LE(c.debug_target_t1_size(), cap) << "target_t1_size > capacity";
 
     // values mirror resident set
@@ -56,68 +78,61 @@ void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
     // each list has no duplicates and iterators are valid
     std::unordered_set<int> all_seen;
 
-    auto walk = [&](const std::list<int>& lst, ARCCache<int, int>::List tag, bool resident)
+    auto walk = [&](const std::list<int>& lst, int expected_tag, bool resident)
     {
         std::unordered_set<int> local;
-        for (auto it = lst.begin(); it != lst.end(); ++it)
+        for (int k : lst)
         {
-            EXPECT_TRUE(local.insert(*it).second)
-                << "duplicate in list tag=" << static_cast<int>(tag)
-                << " key=" << *it;
+            EXPECT_TRUE(local.insert(k).second) << "duplicate in list " << tag_name(expected_tag) << ": " << k;
+            EXPECT_TRUE(all_seen.insert(k).second) << "key " << k << " appears in more than one list";
 
+            const int tag = c.debug_list_tag(k);
+            EXPECT_EQ(tag, expected_tag) << "list tag mismatch for " << k
+                << " (expected " << tag_name(expected_tag)
+                << ", got " << tag_name(tag) << ")";
 
-            EXPECT_TRUE(all_seen.insert(*it).second) << "key " << *it << " appears in more than one list";
+            EXPECT_TRUE(c.debug_iterator_valid(k)) << "iterator invalid for " << k;
 
-            auto iit = infos.find(*it);
-            ASSERT_NE(iit, infos.end()) << "key " << *it << " in a list but not in element_infos";
-
-
-            EXPECT_EQ(iit->second.list, tag) << "list tag mismatch for " << *it;
-            EXPECT_EQ(iit->second.resident, resident) << "resident flag mismatch for " << *it;
-            EXPECT_EQ(iit->second.it, it) << "iterator mismatch for " << *it;
+            EXPECT_EQ(c.contains(k), resident) << "residency mismatch for " << k;
 
             if (resident)
             {
-                EXPECT_NE(vals.find(*it), vals.end()) << "resident key " << *it << " has no value";
+                EXPECT_NE(vals.find(k), vals.end()) << "resident key " << k << " has no value";
             }
+
             else
             {
-                EXPECT_EQ(vals.find(*it), vals.end()) << "ghost key " << *it << " has a value";
+                EXPECT_EQ(vals.find(k), vals.end()) << "ghost key " << k << " has a value";
             }
         }
     };
 
-    walk(t1, ARCCache<int, int>::List::T1, true);
-    walk(t2, ARCCache<int, int>::List::T2, true);
-    walk(b1, ARCCache<int, int>::List::B1, false);
-    walk(b2, ARCCache<int, int>::List::B2, false);
+    walk(t1, ARC_T1, true);
+    walk(t2, ARC_T2, true);
+    walk(b1, ARC_B1, false);
+    walk(b2, ARC_B2, false);
 
     // every element_infos entry appears in exactly one list
-    EXPECT_EQ(all_seen.size(), infos.size()) << "element_infos contains a key missing from all four lists";
-
-    for (const auto& [k, info] : infos)
+    std::size_t num_infos = 0;
+    for (int k : c.debug_all_keys())
     {
+        num_infos++;
+
         EXPECT_TRUE(all_seen.count(k) > 0) << "key " << k << " in element_infos but not in any list";
-
-        if (info.list == ARCCache<int, int>::List::T1 || info.list == ARCCache<int, int>::List::T2)
-        {
-            EXPECT_TRUE(info.resident) << "T1/T2 key " << k << " not resident";
-        }
-
-        else
-        {
-            EXPECT_FALSE(info.resident) << "B1/B2 key " << k << " marked resident";
-        }
     }
 
-    // no values for ghost keys
+    EXPECT_EQ(num_infos, all_seen.size()) << "element_infos size does not match total keys in lists";
+
+    // values contain elements keys only in T1 / T2
     for (const auto& [k, _] : vals)
     {
-        auto iit = infos.find(k);
-        ASSERT_NE(iit, infos.end()) << "value for unknown key: " << k;
-        EXPECT_TRUE(iit->second.resident) << "value for non-resident key: " << k;
+        const int tag = c.debug_list_tag(k);
+        EXPECT_TRUE(tag == ARC_T1 || tag == ARC_T2)
+            << "value for non-resident key " << k
+            << " (tag " << tag_name(tag) << ")";
     }
 }
+
 
 
 TEST(ARC, InvTest)
@@ -152,18 +167,10 @@ TEST(ARC, InvTest)
                                 " op=" + std::to_string(o) +
                                 " key=" + std::to_string(k);
 
-        const bool was_resident = c.contains(k);
-
-        bool was_in_b1 = false;
-        bool was_in_b2 = false;
-        {
-            auto it = c.debug_element_infos().find(k);
-            if (it != c.debug_element_infos().end())
-            {
-                was_in_b1 = (it->second.list == ARCCache<int, int>::List::B1);
-                was_in_b2 = (it->second.list == ARCCache<int, int>::List::B2);
-            }
-        }
+        const int  tag          = c.debug_list_tag(k);
+        const bool was_resident = (tag == ARC_T1 || tag == ARC_T2);
+        const bool was_in_b1    = (tag == ARC_B1);
+        const bool was_in_b2    = (tag == ARC_B2);
 
         if (o < 50)
         {
@@ -174,62 +181,77 @@ TEST(ARC, InvTest)
             if (was_resident)
             {
                 cnt_ins_existing++;
+
                 EXPECT_FALSE(ev.has_value()) << ctx;
                 EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res) << ctx;
+
                 ASSERT_FALSE(c.debug_t2().empty()) << ctx;
                 EXPECT_EQ(c.debug_t2().front(), k) << ctx;
+
+                EXPECT_EQ(c.debug_list_tag(k), ARC_T2) << ctx;
             }
+
             else if (was_in_b1 || was_in_b2)
             {
                 cnt_ins_evict++;
-                // ghost-hit path: key moves to T2
+
                 EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res) << ctx;
+
                 ASSERT_FALSE(c.debug_t2().empty()) << ctx;
                 EXPECT_EQ(c.debug_t2().front(), k) << ctx;
+
+                EXPECT_EQ(c.debug_list_tag(k), ARC_T2) << ctx;
+
                 EXPECT_TRUE(c.contains(k)) << ctx;
             }
+
             else
             {
-                // pure miss
-                // resient may grow by 1 or stay the same
                 cnt_ins_new++;
-
                 const std::size_t after_res = c.debug_t1().size() + c.debug_t2().size();
                 EXPECT_LE(after_res, CAP) << ctx;
-
                 EXPECT_TRUE(after_res == before_res || after_res == before_res + 1) << ctx;
                 EXPECT_TRUE(c.contains(k)) << ctx;
 
-                // key must be at the front of T1 or T2
-                const bool at_t1 = !c.debug_t1().empty() && c.debug_t1().front() == k;
-                const bool at_t2 = !c.debug_t2().empty() && c.debug_t2().front() == k;
-                EXPECT_TRUE(at_t1 || at_t2) << ctx;
+                const int new_tag = c.debug_list_tag(k);
+                EXPECT_TRUE(new_tag == ARC_T1 || new_tag == ARC_T2) << ctx;
+
+                if (new_tag == ARC_T1)
+                {
+                    ASSERT_FALSE(c.debug_t1().empty()) << ctx;
+                    EXPECT_EQ(c.debug_t1().front(), k) << ctx;
+                }
+                else
+                {
+                    ASSERT_FALSE(c.debug_t2().empty()) << ctx;
+                    EXPECT_EQ(c.debug_t2().front(), k) << ctx;
+                }
             }
         }
 
         else if (o < 80)
         {
-            const std::size_t before_res = c.debug_t1().size() + c.debug_t2().size();
-            const std::size_t before_t1  = c.debug_t1().size();
-            const std::size_t before_t2  = c.debug_t2().size();
+            const std::size_t before_t1 = c.debug_t1().size();
+            const std::size_t before_t2 = c.debug_t2().size();
 
             auto v = c.get(k);
 
             if (v.has_value())
             {
                 cnt_get_hit++;
+
                 EXPECT_TRUE(c.contains(k)) << ctx;
-                EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res) << ctx;
+                EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_t1 + before_t2) << ctx;
+
                 ASSERT_FALSE(c.debug_t2().empty()) << ctx;
                 EXPECT_EQ(c.debug_t2().front(), k) << ctx;
-
-                // get hit always moves the key from where it was to T2
+                EXPECT_EQ(c.debug_list_tag(k), ARC_T2) << ctx;
                 EXPECT_LE(c.debug_t1().size(), before_t1) << ctx;
-                EXPECT_GE(c.debug_t2().size(), before_t2) << ctx;
             }
             else
             {
                 cnt_get_miss++;
+
                 EXPECT_FALSE(c.contains(k)) << ctx;
                 EXPECT_EQ(c.debug_t1().size(), before_t1) << ctx;
                 EXPECT_EQ(c.debug_t2().size(), before_t2) << ctx;
@@ -240,48 +262,51 @@ TEST(ARC, InvTest)
         {
             const std::size_t before_res = c.debug_t1().size() + c.debug_t2().size();
 
-            ARCCache<int, int>::List prior_list = ARCCache<int, int>::List::None;
-            if (was_resident)
-            {
-                prior_list = c.debug_element_infos().at(k).list;
-            }
+            const int prior_tag = tag;
 
             auto v = c.extract(k);
 
             if (v.has_value())
             {
                 cnt_ext_hit++;
+
                 EXPECT_FALSE(c.contains(k))          << ctx;
                 EXPECT_FALSE(c.get(k).has_value())   << ctx;
+
                 EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res - 1) << ctx;
                 EXPECT_TRUE(c.debug_in_ghost(k))     << ctx;
-                EXPECT_FALSE(c.debug_ghost_is_t2(k) && (prior_list == ARCCache<int, int>::List::T1))   << ctx << " ghost preserved wrong list";
-                EXPECT_FALSE(!c.debug_ghost_is_t2(k) && (prior_list == ARCCache<int, int>::List::T2))  << ctx << " ghost preserved wrong list";
+
+                const bool saved_t2 = c.debug_ghost_is_t2(k);
+                if (prior_tag == ARC_T1) EXPECT_FALSE(saved_t2) << ctx;
+                if (prior_tag == ARC_T2) EXPECT_TRUE(saved_t2)  << ctx;
             }
 
             else
             {
                 cnt_ext_miss++;
+
+
+
                 EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res) << ctx;
             }
         }
 
         else
         {
-            const std::size_t before_res = c.debug_t1().size() + c.debug_t2().size();
-            const std::size_t before_t1  = c.debug_t1().size();
-            const std::size_t before_t2  = c.debug_t2().size();
-            const std::size_t before_b1  = c.debug_b1().size();
-            const std::size_t before_b2  = c.debug_b2().size();
+            const std::size_t before_t1 = c.debug_t1().size();
+            const std::size_t before_t2 = c.debug_t2().size();
+            const std::size_t before_b1 = c.debug_b1().size();
+            const std::size_t before_b2 = c.debug_b2().size();
+            const std::size_t before_vals = c.debug_values().size();
 
             cnt_contains++;
             c.contains(k);
 
-            EXPECT_EQ(c.debug_t1().size(), before_t1) << ctx;
-            EXPECT_EQ(c.debug_t2().size(), before_t2) << ctx;
-            EXPECT_EQ(c.debug_b1().size(), before_b1) << ctx;
-            EXPECT_EQ(c.debug_b2().size(), before_b2) << ctx;
-            EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res) << ctx;
+            EXPECT_EQ(c.debug_t1().size(),    before_t1)   << ctx;
+            EXPECT_EQ(c.debug_t2().size(),    before_t2)   << ctx;
+            EXPECT_EQ(c.debug_b1().size(),    before_b1)   << ctx;
+            EXPECT_EQ(c.debug_b2().size(),    before_b2)   << ctx;
+            EXPECT_EQ(c.debug_values().size(), before_vals) << ctx;
         }
 
         check_arc_structure(c, ctx);
