@@ -32,7 +32,7 @@ private:
     
 
 public:
-    CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page);
+    explicit CacheSystem(std::function<V(const K&)> slow_get_page);
     int add_cache(const std::string& algorithm, std::size_t capacity);
 
     V access(const K& key);

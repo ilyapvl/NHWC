@@ -141,7 +141,7 @@ int main(const int argc, const char* argv[])
 
 
 
-    CacheSystem<int, int> chs(level_count, slow_get_page);
+    CacheSystem<int, int> chs(slow_get_page);
     int chs_err = 0;
 
     for (int i = 0; i < level_count; i++)

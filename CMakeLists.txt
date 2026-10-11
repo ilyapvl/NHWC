@@ -151,6 +151,16 @@ add_test(NAME test_twoq COMMAND test_twoq)
 
 
 
+# system
+add_executable(test_unit_system tests/test_unit_system.cpp)
+target_include_directories(test_unit_system PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(test_unit_system PRIVATE GTest::gtest)
+add_test(NAME test_unit_system COMMAND test_unit_system)
+
+
+
 include(GoogleTest)
 
 

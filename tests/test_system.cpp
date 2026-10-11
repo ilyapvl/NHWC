@@ -105,7 +105,7 @@ void run_one_file(const std::string& path)
     test = parse_file(path);
 
 
-    CacheSystem<int, int> chs(1, [](const int key) { return key; });
+    CacheSystem<int, int> chs([](const int key) { return key; });
 
     for (const auto& lvl : test.levels)
         chs.add_cache(lvl.algorithm, lvl.capacity);

@@ -51,8 +51,7 @@ int CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capac
 }
 
 template<typename K, typename V>
-CacheSystem<K, V>::CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page)
-    : m_slow_get_page(std::move(slow_get_page))
+CacheSystem<K, V>::CacheSystem(std::function<V(const K&)> slow_get_page) : m_slow_get_page(std::move(slow_get_page))
 {
 }
 

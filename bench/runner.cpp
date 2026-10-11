@@ -22,7 +22,7 @@ std::size_t full_check_cost(const AccessCosts& c)
 
 bool run(const std::vector<int>& sequence, const std::vector<LevelSpec>& levels, const AccessCosts& costs, RunResult& r)
 {
-    CacheSystem<int, int> cs(levels.size(), [](const int& key) { return key; });
+    CacheSystem<int, int> cs([](const int& key) { return key; });
     for (const auto& lvl : levels)
     {
         cs.add_cache(lvl.algorithm, lvl.capacity);
