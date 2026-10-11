@@ -6,6 +6,9 @@
 #include <optional>
 #include <cstddef>
 
+namespace cache
+{
+
 template<typename K, typename S>
 class GhostInfo
 {
@@ -76,5 +79,7 @@ public:
     std::size_t debug_size() const { return m_map.size(); }
     std::size_t debug_capacity() const { return m_size; }
 };
+
+}
 
 #endif

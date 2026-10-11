@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+using namespace cache_bench;
 
 struct Options
 {
@@ -350,7 +351,7 @@ bool search_for_workload(const Options& opts,
         return false;
     }
 
-    OptimalCache<int, int> opt(total_capacity, seq);
+    cache::OptimalCache<int, int> opt(total_capacity, seq);
     optimal_hits_out = static_cast<std::size_t>(opt.simulate());
 
     std::string run_err;

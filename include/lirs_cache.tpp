@@ -1,6 +1,9 @@
 #ifndef LIRS_CACHE_TPP
 #define LIRS_CACHE_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
 LIRSCache<K, V>::LIRSCache(std::size_t capacity)
     : Cache<K, V>(capacity),
@@ -422,6 +425,8 @@ void LIRSCache<K, V>::dump(std::ostream& out) const
             out << key << "=NOVALUE ";
     }
     out << '\n';
+}
+
 }
 
 #endif // LIRS_CACHE_TPP

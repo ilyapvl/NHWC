@@ -9,6 +9,9 @@
 #include <cstddef>
 #include <ostream>
 
+namespace cache
+{
+
 template<typename K, typename V>
 class ARCCache : public Cache<K, V>
 {
@@ -129,6 +132,8 @@ public:
         return s && s->list == List::T2;
     }
 };
+
+}
 
 #include "arc_cache.tpp"
 

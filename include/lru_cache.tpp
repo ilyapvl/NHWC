@@ -1,6 +1,9 @@
 #ifndef LRU_CACHE_TPP
 #define LRU_CACHE_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
 LRUCache<K, V>::LRUCache(std::size_t capacity) : Cache<K, V>(capacity) {}
 
@@ -102,6 +105,8 @@ void LRUCache<K, V>::dump(std::ostream& out) const
             out << key << "=NOVALUE ";
     }
     out << '\n';
+}
+
 }
 
 #endif // LRU_CACHE_TPP

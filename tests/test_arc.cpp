@@ -12,7 +12,7 @@
 
 
 
-
+using cache::ARCCache;
 
 
 constexpr int ARC_UNKNOWN = -1;

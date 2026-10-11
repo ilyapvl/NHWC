@@ -9,6 +9,9 @@
 
 #include "cache.h"
 
+namespace cache
+{
+
 template<typename K, typename V>
 class LIRSCache : public Cache<K, V>
 {
@@ -107,7 +110,7 @@ public:
 };
 
 
-
+}
 
 #include "lirs_cache.tpp"
 

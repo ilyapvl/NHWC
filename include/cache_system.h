@@ -15,6 +15,9 @@
 #include <functional>
 #include <utility>
 
+namespace cache
+{
+
 enum cache_system_err
 {
     INVALID_ALGORITHM = 1001,
@@ -44,6 +47,8 @@ public:
     }
 
 };
+
+}
 
 #include "cache_system.tpp"
 

@@ -8,6 +8,8 @@
 #include <sstream>
 #include <string>
 
+namespace cache_bench
+{
 
 template <typename T>
 bool parse_num(const std::string& s, T& out)
@@ -365,4 +367,6 @@ bool generate(const Workload& w, std::uint32_t seed, std::vector<int>& out)
     }
 
     return true;
+}
+
 }

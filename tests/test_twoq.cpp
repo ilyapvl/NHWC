@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
-
+using cache::TwoQCache;
 
 
 constexpr int TAG_NOT_FOUND = -1;

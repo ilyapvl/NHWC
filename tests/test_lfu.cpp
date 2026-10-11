@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
+using cache::LFUCache;
 
 class LFUTest : public ::testing::Test
 {

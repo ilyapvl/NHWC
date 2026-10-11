@@ -10,6 +10,8 @@
 
 #include "cache.h"
 
+namespace cache
+{
 
 template<typename K, typename V>
 class LFUCache : public Cache<K, V>
@@ -66,6 +68,8 @@ public:
     std::size_t debug_ghost_size() const { return m_ghost_info.debug_size(); }
     std::size_t debug_ghost_capacity() const { return m_ghost_info.debug_capacity(); }
 };
+
+}
 
 #include "lfu_cache.tpp"
 

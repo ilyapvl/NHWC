@@ -5,7 +5,7 @@
 #include <memory>
 #include <stdexcept>
 
-
+using namespace cache;
 
 class CacheSystemTest : public ::testing::Test
 {

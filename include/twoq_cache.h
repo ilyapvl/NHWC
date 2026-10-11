@@ -12,7 +12,8 @@
 #include <cstddef>
 #include <ostream>
 
-
+namespace cache
+{
 
 template<typename K, typename V>
 class TwoQCache : public Cache<K, V>
@@ -135,7 +136,7 @@ public:
     }
 };
 
-
+}
 
 
 #include "twoq_cache.tpp"

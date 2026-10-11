@@ -1,6 +1,9 @@
 #ifndef ARC_CACHE_TPP
 #define ARC_CACHE_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
 ARCCache<K, V>::ARCCache(std::size_t capacity) : Cache<K, V>(capacity), m_target_t1_size(0) {}
 
@@ -317,6 +320,9 @@ void ARCCache<K, V>::dump(std::ostream& out) const
     print_resident(m_t2, "T2 (frequent)");
     print_ghost   (m_b1, "B1 (ghost T1)");
     print_ghost   (m_b2, "B2 (ghost T2)");
+}
+
+
 }
 
 #endif // ARC_CACHE_TPP

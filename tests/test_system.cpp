@@ -12,6 +12,7 @@
 #include <functional>
 #include <iostream>
 
+using cache::CacheSystem;
 
 static std::vector<std::string> test_file_paths;
 

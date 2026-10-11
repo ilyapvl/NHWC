@@ -1,6 +1,9 @@
 #ifndef LFU_CACHE_TPP
 #define LFU_CACHE_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
 LFUCache<K, V>::LFUCache(std::size_t capacity) : Cache<K, V>(capacity) {}
 
@@ -145,6 +148,6 @@ void LFUCache<K, V>::dump(std::ostream& out) const
 
 
 
-
+}
 
 #endif // LFU_CACHE_TPP

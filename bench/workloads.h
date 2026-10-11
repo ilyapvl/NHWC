@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+namespace cache_bench
+{
+
 enum class WorkloadType
 {
     Uniform,
@@ -51,5 +54,7 @@ bool validate_workload(const Workload& w, std::string& err);
 
 // false if the workload is not validated
 bool generate(const Workload& w, std::uint32_t seed, std::vector<int>& out);
+
+}
 
 #endif

@@ -3,6 +3,8 @@
 
 #include <vector>
 
+using cache::OptimalCache;
+
 TEST(OptimalCacheUnit, EmptySequence)
 {
     std::vector<int> seq{};

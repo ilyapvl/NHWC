@@ -1,6 +1,9 @@
 #ifndef TWOQ_CACHE_TPP
 #define TWOQ_CACHE_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
 TwoQCache<K, V>::TwoQCache(std::size_t capacity)
     : Cache<K, V>(capacity),
@@ -247,6 +250,8 @@ void TwoQCache<K, V>::dump(std::ostream& out) const
     print_resident(m_q1,    "A1 (recent)   ");
     print_resident(m_q2,    "Am (frequent) ");
     print_ghost   (m_ghost, "A1out (ghost) ");
+}
+
 }
 
 #endif // TWOQ_CACHE_TPP

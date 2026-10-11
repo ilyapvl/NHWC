@@ -9,6 +9,9 @@
 #include <string>
 #include <vector>
 
+namespace cache_bench
+{
+
 struct Config
 {
     std::vector<std::string> algorithms;
@@ -47,5 +50,7 @@ struct SearchResult
 using ObjectiveFn = std::function<double(const Config&, EvalResult&)>;
 
 SearchResult hill_climb(const Config& start, const ObjectiveFn& obj, const SearchOptions& opts);
+
+}
 
 #endif

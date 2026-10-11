@@ -11,6 +11,8 @@
 #include <vector>
 #include <optional>
 
+using namespace cache;
+
 static std::vector<std::string> test_file_paths;
 
 

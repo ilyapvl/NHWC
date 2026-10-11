@@ -9,6 +9,8 @@
 
 #include "cache.h"
 
+namespace cache
+{
 
 template<typename K, typename V>
 class LRUCache : public Cache<K, V>
@@ -33,6 +35,8 @@ public:
     const std::list<K>& debug_order() const { return m_order; }
     const std::unordered_map<K, typename std::list<K>::iterator>& debug_positions() const { return m_positions; }
 };
+
+}
 
 #include "lru_cache.tpp"
 

@@ -11,6 +11,9 @@
 #include <map>
 #include <set>
 
+namespace cache
+{
+
 template<typename K, typename V>
 class OptimalCache
 {
@@ -38,6 +41,8 @@ public:
 
     void dump(std::ostream& out) const;
 };
+
+}
 
 #include "opt_cache.tpp"
 

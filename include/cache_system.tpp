@@ -1,6 +1,9 @@
 #ifndef CACHE_SYSTEM_TPP
 #define CACHE_SYSTEM_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
 int CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capacity)
 {
@@ -109,6 +112,8 @@ V CacheSystem<K, V>::access(const K& key)
     }
 
     return result;
+}
+
 }
 
 #endif // CACHE_SYSTEM_TPP

@@ -15,6 +15,9 @@
 
 #include "ghost_info.h"
 
+namespace cache
+{
+
 enum cache_err
 {
     NO_ERR = 0,
@@ -81,6 +84,9 @@ public:
         return m_values;
     }
 };
+
+
+}
 
 #include "cache.tpp"
 

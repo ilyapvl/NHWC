@@ -4,6 +4,9 @@
 #include <set>
 #include <sstream>
 
+namespace cache_bench
+{
+
 void add_algo_mutations(const Config& c, const std::vector<std::string>& pool, std::vector<Config>& out)
 {
     for (std::size_t i = 0; i < c.algorithms.size(); ++i)
@@ -154,4 +157,6 @@ SearchResult hill_climb(const Config& start,
     }
 
     return result;
+}
+
 }

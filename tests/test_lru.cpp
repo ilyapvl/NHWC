@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-
+using cache::LRUCache;
 
 class LRUTest : public ::testing::Test
 {

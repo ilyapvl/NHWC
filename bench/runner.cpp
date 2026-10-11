@@ -4,6 +4,9 @@
 #include <chrono>
 #include <numeric>
 
+namespace cache_bench
+{
+
 std::size_t prefix_cost(const AccessCosts& c, std::size_t upto_level)
 {
     std::size_t s = 0;
@@ -22,7 +25,7 @@ std::size_t full_check_cost(const AccessCosts& c)
 
 bool run(const std::vector<int>& sequence, const std::vector<LevelSpec>& levels, const AccessCosts& costs, RunResult& r)
 {
-    CacheSystem<int, int> cs([](const int& key) { return key; });
+    cache::CacheSystem<int, int> cs([](const int& key) { return key; });
     for (const auto& lvl : levels)
     {
         cs.add_cache(lvl.algorithm, lvl.capacity);
@@ -54,4 +57,6 @@ bool run(const std::vector<int>& sequence, const std::vector<LevelSpec>& levels,
 
 
     return true;
+}
+
 }
