@@ -111,7 +111,7 @@ target_include_directories(test_lru PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(test_lru PRIVATE GTest::gtest)
-add_test(NAME unit_lru COMMAND test_lru)
+add_test(NAME test_lru COMMAND test_lru)
 
 
 # LFU
@@ -120,7 +120,7 @@ target_include_directories(test_lfu PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(test_lfu PRIVATE GTest::gtest)
-add_test(NAME unit_lfu COMMAND test_lfu)
+add_test(NAME test_lfu COMMAND test_lfu)
 
 
 # LIRS
@@ -129,7 +129,7 @@ target_include_directories(test_lirs PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(test_lirs PRIVATE GTest::gtest)
-add_test(NAME unit_lirs COMMAND test_lirs)
+add_test(NAME test_lirs COMMAND test_lirs)
 
 
 # ARC
@@ -138,7 +138,7 @@ target_include_directories(test_arc PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(test_arc PRIVATE GTest::gtest)
-add_test(NAME unit_arc COMMAND test_arc)
+add_test(NAME test_arc COMMAND test_arc)
 
 
 #2Q
@@ -147,7 +147,7 @@ target_include_directories(test_twoq PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(test_twoq PRIVATE GTest::gtest)
-add_test(NAME unit_twoq COMMAND test_twoq)
+add_test(NAME test_twoq COMMAND test_twoq)
 
 
 
