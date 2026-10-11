@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "lru_cache.h"
+#include "cache_test_common.h"
 
 #include <iostream>
 #include <memory>
@@ -341,16 +342,17 @@ TEST_F(LRUTest, CapacityZeroBypass)
 
 // --- long sequence ---
 
-TEST_F(LRUTest, InvTest)
-{
-    constexpr std::size_t CAP       = 1024;
-    constexpr int         KEY_RANGE = 4096;
-    constexpr int         OPS       = 100000;
+using LRUInv = CacheInvTest<LRUCache<int, int>>;
 
-    init(CAP);
+TEST_P(LRUInv, InvTest)
+{
     auto& c = *cache;
 
-    std::mt19937 rng(1234);
+    const std::size_t CAP       = GetParam().cap;
+    const int         KEY_RANGE = GetParam().key_range;
+    const int         OPS       = GetParam().ops;
+
+    std::mt19937 rng(GetParam().seed);
     std::uniform_int_distribution<int> kd(0, KEY_RANGE - 1);
     std::uniform_int_distribution<int> od(0, 99);
 
@@ -465,17 +467,21 @@ TEST_F(LRUTest, InvTest)
         if (::testing::Test::HasFailure()) return;
     }
 
-    std::cerr << "[executed operations] ins_new=" << cnt_ins_new
-          << " ins_existing=" << cnt_ins_existing
-          << " ins_evict=" << cnt_ins_evict
-          << " get_hit=" << cnt_get_hit
-          << " get_miss=" << cnt_get_miss
-          << " ext_hit=" << cnt_ext_hit
-          << " ext_miss=" << cnt_ext_miss
-          << " contains=" << cnt_contains << '\n';
+    std::cerr << "[cap=" << CAP << " key_range=" << KEY_RANGE
+            << " seed=" << GetParam().seed << "] "
+            << "ins_new=" << cnt_ins_new
+            << " ins_existing=" << cnt_ins_existing
+            << " ins_evict=" << cnt_ins_evict
+            << " get_hit=" << cnt_get_hit
+            << " get_miss=" << cnt_get_miss
+            << " ext_hit=" << cnt_ext_hit
+            << " ext_miss=" << cnt_ext_miss
+            << " contains=" << cnt_contains << '\n';
 
     check_lru_structure(c, "final");
 }
+
+INSTANTIATE_TEST_SUITE_P(LruSizes, LRUInv, StandardInvParams());
 
 int main(int argc, char** argv)
 {

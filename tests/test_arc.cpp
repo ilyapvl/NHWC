@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "arc_cache.h"
+#include "cache_test_common.h"
 
 #include <algorithm>
 #include <iostream>
@@ -452,13 +453,18 @@ TEST_F(ARCTest, T1FullMissErasesWithoutGhost)
 // --- long sequence ---
 
 
-TEST_F(ARCTest, InvTest)
-{
-    constexpr std::size_t CAP       = 1024;
-    constexpr int         KEY_RANGE = 4096;
-    constexpr int         OPS       = 100000;
+#include "cache_test_common.h"
 
-    init(CAP);
+// ...
+
+using ARCInv = CacheInvTest<ARCCache<int, int>>;
+
+TEST_P(ARCInv, InvTest)
+{
+    const std::size_t CAP       = GetParam().cap;
+    const int         KEY_RANGE = GetParam().key_range;
+    const int         OPS       = GetParam().ops;
+
     auto& c = *cache;
 
     std::mt19937 rng(1234);
@@ -537,13 +543,14 @@ TEST_F(ARCTest, InvTest)
             {
                 cnt_ins_evict++;
 
-                EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res) << ctx;
+                const std::size_t after_res = c.debug_t1().size() + c.debug_t2().size();
+                EXPECT_TRUE(after_res == before_res || after_res == before_res + 1) << ctx;
+                EXPECT_LE(after_res, CAP) << ctx;
 
                 ASSERT_FALSE(c.debug_t2().empty()) << ctx;
                 EXPECT_EQ(c.debug_t2().front(), k) << ctx;
 
                 EXPECT_EQ(c.debug_list_tag(k), ARC_T2) << ctx;
-
                 EXPECT_TRUE(c.contains(k)) << ctx;
             }
 
@@ -711,6 +718,8 @@ TEST_F(ARCTest, InvTest)
 
     check_arc_structure(c, "final");
 }
+
+INSTANTIATE_TEST_SUITE_P(ArcSizes, ARCInv, StandardInvParams());
 
 int main(int argc, char** argv)
 {

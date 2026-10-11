@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "twoq_cache.h"
+#include "cache_test_common.h"
 
 #include <algorithm>
 #include <iostream>
@@ -410,13 +411,14 @@ TEST_F(TwoQTest, GhostTrimRespectsTargetSize)
 // --- long sequence ---
 
 
-TEST_F(TwoQTest, InvTest)
-{
-    constexpr std::size_t CAP       = 1024;
-    constexpr int         KEY_RANGE = 4096;
-    constexpr int         OPS       = 100000;
+using TwoQInv = CacheInvTest<TwoQCache<int, int>>;
 
-    init(CAP);
+TEST_P(TwoQInv, InvTest)
+{
+    const std::size_t CAP       = GetParam().cap;
+    const int         KEY_RANGE = GetParam().key_range;
+    const int         OPS       = GetParam().ops;
+
     auto& c = *cache;
 
     EXPECT_EQ(c.debug_target_q1_size(),    std::max<std::size_t>(1, CAP / 4));
@@ -692,6 +694,8 @@ TEST_F(TwoQTest, InvTest)
 
     check_twoq_structure(c, "final");
 }
+
+INSTANTIATE_TEST_SUITE_P(TwoQSizes, TwoQInv, StandardInvParams());
 
 int main(int argc, char** argv)
 {

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "lfu_cache.h"
+#include "cache_test_common.h"
 
 #include <algorithm>
 #include <iostream>
@@ -468,13 +469,14 @@ TEST_F(LFUTest, GetDoesNotReturnSystemGhost)
 // --- long sequence ---
 
 
-TEST_F(LFUTest, InvTest)
-{
-    constexpr std::size_t CAP       = 1024;
-    constexpr int         KEY_RANGE = 4096;
-    constexpr int         OPS       = 100000;
+using LFUInv = CacheInvTest<LFUCache<int, int>>;
 
-    init(CAP);
+TEST_P(LFUInv, InvTest)
+{
+    const std::size_t CAP       = GetParam().cap;
+    const int         KEY_RANGE = GetParam().key_range;
+    const int         OPS       = GetParam().ops;
+
     auto& c = *cache;
 
     std::mt19937 rng(1234);
@@ -643,6 +645,8 @@ TEST_F(LFUTest, InvTest)
 
     check_lfu_structure(c, "final");
 }
+
+INSTANTIATE_TEST_SUITE_P(LfuSizes, LFUInv, StandardInvParams());
 
 int main(int argc, char** argv)
 {

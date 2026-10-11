@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "lirs_cache.h"
+#include "cache_test_common.h"
 
 #include <algorithm>
 #include <iostream>
@@ -650,13 +651,14 @@ TEST_F(LIRSTest, ReinsertAfterExtractHirDoesNotAffectLir)
 // --- long sequence ---
 
 
-TEST_F(LIRSTest, InvTest)
-{
-    constexpr std::size_t CAP       = 1024;
-    constexpr int         KEY_RANGE = 4096;
-    constexpr int         OPS       = 100000;
+using LIRSInv = CacheInvTest<LIRSCache<int, int>>;
 
-    init(CAP);
+TEST_P(LIRSInv, InvTest)
+{
+    const std::size_t CAP       = GetParam().cap;
+    const int         KEY_RANGE = GetParam().key_range;
+    const int         OPS       = GetParam().ops;
+
     auto& c = *cache;
 
     std::mt19937 rng(1234);
@@ -792,6 +794,8 @@ TEST_F(LIRSTest, InvTest)
 
     check_lirs_structure(c, "final");
 }
+
+INSTANTIATE_TEST_SUITE_P(LirsSizes, LIRSInv, StandardInvParams());
 
 int main(int argc, char** argv)
 {
