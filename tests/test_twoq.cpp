@@ -424,7 +424,7 @@ TEST_P(TwoQInv, InvTest)
     EXPECT_EQ(c.debug_target_q1_size(),    std::max<std::size_t>(1, CAP / 4));
     EXPECT_EQ(c.debug_target_ghost_size(), std::max<std::size_t>(1, CAP / 2));
 
-    std::mt19937 rng(1234);
+    std::mt19937 rng(GetParam().seed);
     std::uniform_int_distribution<int> kd(0, KEY_RANGE - 1);
     std::uniform_int_distribution<int> od(0, 99);
 
@@ -694,7 +694,6 @@ TEST_P(TwoQInv, InvTest)
 
     check_twoq_structure(c, "final");
 }
-
 INSTANTIATE_TEST_SUITE_P(TwoQSizes, TwoQInv, StandardInvParams());
 
 int main(int argc, char** argv)

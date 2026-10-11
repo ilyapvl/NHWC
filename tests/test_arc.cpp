@@ -63,6 +63,7 @@ void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
     const auto& t2    = c.debug_t2();
     const auto& b1    = c.debug_b1();
     const auto& b2    = c.debug_b2();
+    const auto& infos = c.debug_element_infos();
     const auto& vals  = c.debug_values();
 
     const std::size_t cap = c.capacity();
@@ -98,7 +99,9 @@ void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
 
             if (resident)
             {
-                EXPECT_NE(vals.find(k), vals.end()) << "resident key " << k << " has no value";
+                auto vit = vals.find(k);
+                ASSERT_NE(vit, vals.end()) << "resident key " << k << " has no value";
+                EXPECT_TRUE(vit->second)  << "null value for resident " << k;
             }
 
             else
@@ -113,16 +116,30 @@ void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
     walk(b1, ARC_B1, false);
     walk(b2, ARC_B2, false);
 
-    // every element_infos entry appears in exactly one list
     std::size_t num_infos = 0;
-    for (int k : c.debug_all_keys())
+    for (const auto& [k, info] : infos)
     {
         num_infos++;
 
         EXPECT_TRUE(all_seen.count(k) > 0) << "key " << k << " in element_infos but not in any list";
+
+        const int  tag             = c.debug_list_tag(k);
+        const bool is_resident_tag = (tag == ARC_T1 || tag == ARC_T2);
+
+        EXPECT_EQ(info.resident, is_resident_tag) << "resident flag disagrees with list tag for key " << k;
+
+        if (info.resident)
+        {
+            EXPECT_NE(vals.find(k), vals.end()) << "resident key " << k << " has no value";
+        }
+
+        else
+        {
+            EXPECT_EQ(vals.find(k), vals.end()) << "ghost key " << k << " has a value";
+        }
     }
 
-    EXPECT_EQ(num_infos, all_seen.size()) << "element_infos size does not match total keys in lists";
+    EXPECT_EQ(num_infos, all_seen.size())<< "element_infos size does not match total keys in lists";
 
     // values contain elements keys only in T1 / T2
     for (const auto& [k, _] : vals)
@@ -453,9 +470,6 @@ TEST_F(ARCTest, T1FullMissErasesWithoutGhost)
 // --- long sequence ---
 
 
-#include "cache_test_common.h"
-
-// ...
 
 using ARCInv = CacheInvTest<ARCCache<int, int>>;
 
@@ -467,7 +481,7 @@ TEST_P(ARCInv, InvTest)
 
     auto& c = *cache;
 
-    std::mt19937 rng(1234);
+    std::mt19937 rng(GetParam().seed);
     std::uniform_int_distribution<int> kd(0, KEY_RANGE - 1);
     std::uniform_int_distribution<int> od(0, 99);
 
@@ -514,15 +528,15 @@ TEST_P(ARCInv, InvTest)
                                 " op=" + std::to_string(o) +
                                 " key=" + std::to_string(k);
 
-        const int  tag          = c.debug_list_tag(k);
-        const bool was_resident = (tag == ARC_T1 || tag == ARC_T2);
-        const bool was_in_b1    = (tag == ARC_B1);
-        const bool was_in_b2    = (tag == ARC_B2);
+        const int  tag_before     = c.debug_list_tag(k);
+        const bool was_resident   = (tag_before == ARC_T1 || tag_before == ARC_T2);
+        const bool was_in_b1      = (tag_before == ARC_B1);
+        const bool was_in_b2      = (tag_before == ARC_B2);
 
         if (o < 50)
         {
             const std::size_t before_res   = c.debug_t1().size() + c.debug_t2().size();
-            const bool was_in_ghost = c.debug_in_ghost(k);
+            const bool        was_in_ghost = c.debug_in_ghost(k);
 
             auto ev = c.insert(k, i);
 
@@ -596,8 +610,7 @@ TEST_P(ARCInv, InvTest)
                     access_count[k] = 1;
                 }
             }
-
-            else if (tag == ARC_UNKNOWN)
+            else if (tag_before == ARC_UNKNOWN)
             {
                 // start a fresh history
                 access_count[k] = 1;
@@ -640,7 +653,7 @@ TEST_P(ARCInv, InvTest)
                 EXPECT_EQ(c.debug_t1().size(), before_t1) << ctx;
                 EXPECT_EQ(c.debug_t2().size(), before_t2) << ctx;
 
-                if (tag == ARC_UNKNOWN)
+                if (tag_before == ARC_UNKNOWN)
                 {
                     access_count[k] = 0;
                 }
@@ -653,7 +666,7 @@ TEST_P(ARCInv, InvTest)
         {
             const std::size_t before_res = c.debug_t1().size() + c.debug_t2().size();
 
-            const int prior_tag = tag;
+            const int prior_tag = tag_before;
 
             auto v = c.extract(k);
 

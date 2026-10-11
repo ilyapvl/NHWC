@@ -8,6 +8,7 @@
 #include <utility>
 #include <cstddef>
 #include <ostream>
+#include <algorithm>
 
 namespace cache
 {
@@ -16,7 +17,6 @@ template<typename K, typename V>
 class ARCCache : public Cache<K, V>
 {
 private:
-    
     enum class List { None, T1, T2, B1, B2 };
 
     struct Element_info
@@ -68,6 +68,10 @@ public:
     const std::list<K>& debug_b1() const { return m_b1; }
     const std::list<K>& debug_b2() const { return m_b2; }
 
+    const std::unordered_map<K, Element_info>& debug_element_infos() const
+    {
+        return m_element_infos;
+    }
 
     // -1   not in element_infos
     // 0    List::None
@@ -111,15 +115,6 @@ public:
     }
 
     std::size_t debug_target_t1_size() const { return m_target_t1_size; }
-
-    std::vector<K> debug_all_keys() const
-    {
-        std::vector<K> out;
-
-        for (const auto& [k, _] : m_element_infos) out.push_back(k);
-
-        return out;
-    }
 
     bool debug_in_ghost(const K& key) const
     {

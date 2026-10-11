@@ -662,7 +662,7 @@ TEST_P(LIRSInv, InvTest)
 
     auto& c = *cache;
 
-    std::mt19937 rng(1234);
+    std::mt19937 rng(GetParam().seed);
     std::uniform_int_distribution<int> kd(0, KEY_RANGE - 1);
     std::uniform_int_distribution<int> od(0, 99);
 
