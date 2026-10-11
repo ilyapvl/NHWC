@@ -52,30 +52,31 @@ int CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capac
 
 template<typename K, typename V>
 CacheSystem<K, V>::CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page)
-    : m_slow_get_page(std::move(slow_get_page)),
-      m_hits(size, 0)
+    : m_slow_get_page(std::move(slow_get_page))
 {
 }
 
 template<typename K, typename V>
 V CacheSystem<K, V>::access(const K& key)
 {
-    for (int i = 0; i < m_levels.size(); i++)
+    // lvl 0 hit
+    if (!m_levels.empty())
     {
-        auto v = m_levels[i]->get(key);
-        if (!v) continue;
-
-        V result = std::move(*v);
-
-        if (i == 0)
+        auto v = m_levels[0]->get(key);
+        if (v)
         {
             m_last_hit_level = 0;
             m_hits[0]++;
-            return result;
+            return *v;
         }
+    }
 
+    for (std::size_t i = 1; i < m_levels.size(); i++)
+    {
         auto extracted = m_levels[i]->extract_ptr(key);
         if (!extracted) continue;
+
+        V result = *extracted;
 
         std::optional<std::pair<K, std::unique_ptr<const V>>> moving = std::make_pair(key, std::move(extracted));
 
@@ -93,6 +94,8 @@ V CacheSystem<K, V>::access(const K& key)
         return result;
     }
 
+    // miss
+
     V value = m_slow_get_page(key);
 
     auto vptr = std::make_unique<const V>(std::move(value));
@@ -107,7 +110,6 @@ V CacheSystem<K, V>::access(const K& key)
     }
 
     return result;
-    
 }
 
 #endif // CACHE_SYSTEM_TPP
