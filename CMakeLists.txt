@@ -106,48 +106,48 @@ add_test(NAME optimal_cache_test COMMAND optimal_cache_test)
 
 
 # LRU
-add_executable(test_unit_lru tests/test_unit_lru.cpp)
-target_include_directories(test_unit_lru PRIVATE
+add_executable(test_lru tests/test_lru.cpp)
+target_include_directories(test_lru PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
-target_link_libraries(test_unit_lru PRIVATE GTest::gtest)
-add_test(NAME unit_lru COMMAND test_unit_lru)
+target_link_libraries(test_lru PRIVATE GTest::gtest)
+add_test(NAME unit_lru COMMAND test_lru)
 
 
 # LFU
-add_executable(test_unit_lfu tests/test_unit_lfu.cpp)
-target_include_directories(test_unit_lfu PRIVATE
+add_executable(test_lfu tests/test_lfu.cpp)
+target_include_directories(test_lfu PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
-target_link_libraries(test_unit_lfu PRIVATE GTest::gtest)
-add_test(NAME unit_lfu COMMAND test_unit_lfu)
+target_link_libraries(test_lfu PRIVATE GTest::gtest)
+add_test(NAME unit_lfu COMMAND test_lfu)
 
 
 # LIRS
-add_executable(test_unit_lirs tests/test_unit_lirs.cpp)
-target_include_directories(test_unit_lirs PRIVATE
+add_executable(test_lirs tests/test_lirs.cpp)
+target_include_directories(test_lirs PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
-target_link_libraries(test_unit_lirs PRIVATE GTest::gtest)
-add_test(NAME unit_lirs COMMAND test_unit_lirs)
+target_link_libraries(test_lirs PRIVATE GTest::gtest)
+add_test(NAME unit_lirs COMMAND test_lirs)
 
 
 # ARC
-add_executable(test_unit_arc tests/test_unit_arc.cpp)
-target_include_directories(test_unit_arc PRIVATE
+add_executable(test_arc tests/test_arc.cpp)
+target_include_directories(test_arc PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
-target_link_libraries(test_unit_arc PRIVATE GTest::gtest)
-add_test(NAME unit_arc COMMAND test_unit_arc)
+target_link_libraries(test_arc PRIVATE GTest::gtest)
+add_test(NAME unit_arc COMMAND test_arc)
 
 
 #2Q
-add_executable(test_unit_twoq tests/test_unit_twoq.cpp)
-target_include_directories(test_unit_twoq PRIVATE
+add_executable(test_twoq tests/test_twoq.cpp)
+target_include_directories(test_twoq PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
-target_link_libraries(test_unit_twoq PRIVATE GTest::gtest)
-add_test(NAME unit_twoq COMMAND test_unit_twoq)
+target_link_libraries(test_twoq PRIVATE GTest::gtest)
+add_test(NAME unit_twoq COMMAND test_twoq)
 
 
 

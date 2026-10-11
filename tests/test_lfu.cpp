@@ -1,28 +1,30 @@
 #include <gtest/gtest.h>
 #include "lfu_cache.h"
 
+#include <algorithm>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <string>
 #include <unordered_set>
 #include <vector>
 
 
-class DumpOnFailure
+class LFUTest : public ::testing::Test
 {
-public:
-    explicit DumpOnFailure(const LFUCache<int, int>& cache) : m_cache(cache) {}
+protected:
+    std::unique_ptr<LFUCache<int, int>> cache;
 
-    ~DumpOnFailure()
+    void init(std::size_t capacity)
     {
-        if (!::testing::Test::HasFailure() || s_already_reported) return;
-        s_already_reported = true;
-        m_cache.dump(std::cerr);
+        cache = std::make_unique<LFUCache<int, int>>(capacity);
     }
 
-private:
-    const LFUCache<int, int>& m_cache;
-    static inline bool s_already_reported = false;
+    void TearDown() override
+    {
+        if (::testing::Test::HasFailure() && cache)
+            cache->dump(std::cerr);
+    }
 };
 
 
@@ -95,13 +97,385 @@ void check_lfu_structure(const LFUCache<int, int>& c, const std::string& what)
 }
 
 
-TEST(LFU, InvTest)
+std::size_t resident_count(const LFUCache<int, int>& c)
+{
+    return c.debug_key_to_pair().size();
+}
+
+
+static void fill_seq(LFUCache<int, int>& c, int n)
+{
+    for (int i = 1; i <= n; i++) c.insert(i, i * 10);
+}
+
+
+// --- unit ---
+
+
+TEST_F(LFUTest, InsertIntoEmpty)
+{
+    init(4);
+    auto& c = *cache;
+
+    auto ev = c.insert(1, 10);
+
+    EXPECT_FALSE(ev.has_value());
+    EXPECT_EQ(resident_count(c), 1u);
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 1);
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, InsertNewKeyNotFull)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.insert(3, 30);
+
+    EXPECT_EQ(resident_count(c), 3u);
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 1);
+    EXPECT_EQ(c.debug_key_to_pair().at(2).first, 1);
+    EXPECT_EQ(c.debug_key_to_pair().at(3).first, 1);
+
+    // reverse insertion order
+    ASSERT_TRUE(c.debug_freq_to_keys().count(1));
+    EXPECT_EQ(c.debug_freq_to_keys().at(1).front(), 3);
+    EXPECT_EQ(c.debug_freq_to_keys().at(1).back(), 1);
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, InsertExisting)
+{
+    init(4);
+    auto& c = *cache;
+    c.insert(1, 10);
+    c.insert(2, 20);
+
+    auto ev = c.insert(1, 111);
+
+    EXPECT_FALSE(ev.has_value());
+    EXPECT_EQ(resident_count(c), 2u);
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 2);
+
+    ASSERT_TRUE(c.debug_freq_to_keys().count(2));
+    EXPECT_EQ(c.debug_freq_to_keys().at(2).front(), 1);
+    EXPECT_EQ(*c.get(1), 111);
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, InsertEvictsLowestFreq)
+{
+    init(4);
+    auto& c = *cache;
+    fill_seq(c, 4);  // 1: [4 3 2 1]
+
+    auto ev = c.insert(99, 990);
+
+    ASSERT_TRUE(ev.has_value());
+    EXPECT_EQ(ev->first, 1);
+    EXPECT_EQ(ev->second, 10);
+    EXPECT_EQ(resident_count(c), 4u);
+    EXPECT_FALSE(c.contains(1));
+
+    // new key at front of freq 1
+    ASSERT_TRUE(c.debug_freq_to_keys().count(1));
+    EXPECT_EQ(c.debug_freq_to_keys().at(1).front(), 99);
+    EXPECT_EQ(c.debug_freq_to_keys().at(1).back(), 2);
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, GetHitIncrements)
+{
+    init(4);
+    auto& c = *cache;
+    fill_seq(c, 4);
+
+    auto v = c.get(2);
+
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, 20);
+    EXPECT_EQ(c.debug_key_to_pair().at(2).first, 2);
+
+    ASSERT_TRUE(c.debug_freq_to_keys().count(2));
+    EXPECT_EQ(c.debug_freq_to_keys().at(2).front(), 2);
+
+    // freq 1 -> freq 2
+    ASSERT_TRUE(c.debug_freq_to_keys().count(1));
+    EXPECT_EQ(std::find(c.debug_freq_to_keys().at(1).begin(), c.debug_freq_to_keys().at(1).end(), 2), c.debug_freq_to_keys().at(1).end());
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, GetMissNoStateChange)
+{
+    init(4);
+    auto& c = *cache;
+    fill_seq(c, 4);
+
+    auto v = c.get(999);
+
+    EXPECT_FALSE(v.has_value());
+    EXPECT_EQ(resident_count(c), 4u);
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 1);
+    EXPECT_EQ(c.debug_key_to_pair().at(4).first, 1);
+
+
+
+
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, ExtractHitRemovesKey)
+{
+    init(4);
+    auto& c = *cache;
+    fill_seq(c, 4);
+
+    auto v = c.extract(2);
+
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, 20);
+    EXPECT_FALSE(c.contains(2));
+    EXPECT_EQ(resident_count(c), 3u);
+    EXPECT_FALSE(c.debug_key_to_pair().count(2));
+
+
+
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, ExtractMiss)
+{
+    init(4);
+    auto& c = *cache;
+    fill_seq(c, 4);
+
+    auto v = c.extract(999);
+
+    EXPECT_FALSE(v.has_value());
+    EXPECT_EQ(resident_count(c), 4u);
+
+
+
+
+    check_lfu_structure(c, "unit");
+}
+
+
+
+TEST_F(LFUTest, Contains)
+{
+    init(4);
+    auto& c = *cache;
+    fill_seq(c, 4);
+
+    EXPECT_TRUE(c.contains(1));
+    EXPECT_TRUE(c.contains(4));
+    EXPECT_FALSE(c.contains(5));
+
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 1);
+    EXPECT_EQ(c.debug_key_to_pair().at(4).first, 1);
+
+    check_lfu_structure(c, "unit");
+}
+
+
+
+
+TEST_F(LFUTest, InsertAndGetIncrementsFreq)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(1, 20);
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 2);
+
+    auto v = c.get(1);
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, 20);
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 3);
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, InsertExistingInFullCacheDoesNotEvict)
+{
+    init(4);
+    auto& c = *cache;
+    fill_seq(c, 4);
+
+    auto ev = c.insert(3, 333);
+
+    EXPECT_FALSE(ev.has_value());
+    EXPECT_EQ(resident_count(c), 4u);
+    EXPECT_EQ(c.debug_key_to_pair().at(3).first, 2);
+
+    EXPECT_EQ(*c.get(3), 333);
+
+
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, PromoteToHigherfreq)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    // 1: [2 1]
+
+    ASSERT_EQ(c.debug_key_to_pair().at(1).first, 1);
+    ASSERT_EQ(c.debug_key_to_pair().at(2).first, 1);
+
+    c.get(1);
+
+    // 1: [2], 2: [1]
+
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 2);
+    EXPECT_EQ(c.debug_key_to_pair().at(2).first, 1);
+
+    ASSERT_TRUE(c.debug_freq_to_keys().count(2));
+    EXPECT_EQ(c.debug_freq_to_keys().at(2).front(), 1);
+    ASSERT_TRUE(c.debug_freq_to_keys().count(1));
+    EXPECT_EQ(c.debug_freq_to_keys().at(1).front(), 2);
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, EvictionPicksSmallestFreq)
+{
+    init(3);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.insert(3, 30);
+
+    for (int i = 0; i < 10; i++) c.get(1); // 11
+    for (int i = 0; i < 5; i++)  c.get(2); // 6
+    c.get(3); // 2
+
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 11);
+    EXPECT_EQ(c.debug_key_to_pair().at(2).first, 6);
+    EXPECT_EQ(c.debug_key_to_pair().at(3).first, 2);
+
+    auto ev = c.insert(4, 40);
+
+    ASSERT_TRUE(ev.has_value());
+
+    EXPECT_EQ(ev->first, 3);
+
+    EXPECT_FALSE(c.contains(3));
+    EXPECT_TRUE(c.contains(1));
+    EXPECT_TRUE(c.contains(2));
+    EXPECT_TRUE(c.contains(4));
+
+
+
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, EvictionPicksLRUWithinBucket)
+{
+    init(3);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.insert(3, 30);
+    // 1: [3, 2, 1]
+
+    c.get(1);
+    // [3, 2], 2: [1]
+
+    auto ev = c.insert(4, 40);
+    ASSERT_TRUE(ev.has_value());
+
+    EXPECT_EQ(ev->first, 2);  // back of 1 
+
+    ASSERT_TRUE(c.debug_freq_to_keys().count(1));
+    EXPECT_EQ(c.debug_freq_to_keys().at(1).front(), 4);
+    EXPECT_EQ(c.debug_freq_to_keys().at(1).back(), 3);
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, ExtractReinsertRestoresFrequency)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    for (int i = 0; i < 5; i++) c.get(1); // freq 6
+
+    ASSERT_EQ(c.debug_key_to_pair().at(1).first, 6);
+
+    c.extract(1);
+
+    EXPECT_FALSE(c.contains(1));
+    EXPECT_TRUE(c.debug_in_ghost(1));
+    EXPECT_EQ(c.debug_ghost_freq(1), 6);
+
+    c.insert(1, 11);
+
+    EXPECT_TRUE(c.contains(1));
+    EXPECT_FALSE(c.debug_in_ghost(1));
+
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 6);  // restored
+
+    check_lfu_structure(c, "unit");
+}
+
+TEST_F(LFUTest, GetDoesNotReturnSystemGhost)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    for (int i = 0; i < 5; i++) c.get(1); // freq 6
+    c.extract(1);
+
+    ASSERT_TRUE(c.debug_in_ghost(1));
+    ASSERT_EQ(c.debug_ghost_freq(1), 6);
+
+    auto v = c.get(1);
+    EXPECT_FALSE(v.has_value());
+    EXPECT_TRUE(c.debug_in_ghost(1));
+    EXPECT_EQ(c.debug_ghost_freq(1), 6);
+
+    c.insert(1, 11);
+    EXPECT_EQ(c.debug_key_to_pair().at(1).first, 6);
+
+
+
+
+
+    check_lfu_structure(c, "unit");
+}
+
+
+// --- long sequence ---
+
+
+TEST_F(LFUTest, InvTest)
 {
     constexpr std::size_t CAP       = 1024;
     constexpr int         KEY_RANGE = 4096;
     constexpr int         OPS       = 100000;
 
-    LFUCache<int, int> c(CAP);
+    init(CAP);
+    auto& c = *cache;
 
     std::mt19937 rng(1234);
     std::uniform_int_distribution<int> kd(0, KEY_RANGE - 1);
@@ -116,10 +490,8 @@ TEST(LFU, InvTest)
     std::size_t cnt_ext_miss     = 0;
     std::size_t cnt_contains     = 0;
 
-    for (int i = 0; i < OPS; ++i)
+    for (int i = 0; i < OPS; i++)
     {
-        DumpOnFailure guard(c);
-
         const int k = kd(rng);
         const int o = od(rng);
 

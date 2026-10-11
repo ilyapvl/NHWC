@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <string>
 #include <unordered_set>
@@ -35,23 +36,22 @@ const char* tag_name(int tag)
 }
 
 
-class DumpOnFailure
+class ARCTest : public ::testing::Test
 {
-public:
-    explicit DumpOnFailure(const ARCCache<int, int>& cache) : m_cache(cache) {}
+protected:
+    std::unique_ptr<ARCCache<int, int>> cache;
 
-    ~DumpOnFailure()
+    void init(std::size_t capacity)
     {
-        if (!::testing::Test::HasFailure() || s_already_reported) return;
-        s_already_reported = true;
-        m_cache.dump(std::cerr);
+        cache = std::make_unique<ARCCache<int, int>>(capacity);
     }
 
-private:
-    const ARCCache<int, int>& m_cache;
-    static inline bool s_already_reported = false;
+    void TearDown() override
+    {
+        if (::testing::Test::HasFailure() && cache)
+            cache->dump(std::cerr);
+    }
 };
-
 
 
 void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
@@ -134,18 +134,339 @@ void check_arc_structure(const ARCCache<int, int>& c, const std::string& what)
 }
 
 
+// --- unit ---
 
-TEST(ARC, InvTest)
+
+TEST_F(ARCTest, InsertIntoEmptyInT1)
+{
+    init(4);
+    auto& c = *cache;
+
+    auto ev = c.insert(1, 10);
+
+    EXPECT_FALSE(ev.has_value());
+    EXPECT_EQ(c.debug_list_tag(1), ARC_T1);
+    EXPECT_EQ(c.debug_t1().front(), 1);
+    EXPECT_EQ(c.debug_target_t1_size(), 0u);
+
+    check_arc_structure(c, "unit");
+}
+
+
+TEST_F(ARCTest, InsertExistinToT2)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    ASSERT_EQ(c.debug_list_tag(1), ARC_T1);
+
+    auto ev = c.insert(1, 11);
+
+    EXPECT_FALSE(ev.has_value());
+    EXPECT_EQ(c.debug_t1().size(), 0u);
+    EXPECT_EQ(c.debug_list_tag(1), ARC_T2);
+    EXPECT_EQ(c.debug_t2().front(), 1);
+
+
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, InsertExistingInT2StaysInT2)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.get(1);
+    ASSERT_EQ(c.debug_list_tag(1), ARC_T2);
+
+    auto ev = c.insert(1, 11);
+
+    EXPECT_FALSE(ev.has_value());
+    EXPECT_EQ(c.debug_list_tag(1), ARC_T2);
+    EXPECT_EQ(c.debug_t2().front(), 1);
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, T1HitMovesToT2)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    ASSERT_EQ(c.debug_list_tag(1), ARC_T1);
+
+    auto v = c.get(1);
+
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, 10);
+    EXPECT_EQ(c.debug_list_tag(1), ARC_T2);
+    EXPECT_EQ(c.debug_t1().size(), 1u);
+    EXPECT_EQ(c.debug_t1().front(), 2);
+    EXPECT_EQ(c.debug_t2().front(), 1);
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, T2HitMovesToFront)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.get(1);
+    c.get(2);
+    
+
+    ASSERT_EQ(c.debug_t2().front(), 2);
+    ASSERT_EQ(c.debug_t2().back(), 1);
+
+    auto v = c.get(1);
+
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, 10);
+    EXPECT_EQ(c.debug_t2().front(), 1);
+    EXPECT_EQ(c.debug_t2().back(), 2);
+
+    check_arc_structure(c, "unit");
+}
+
+
+
+TEST_F(ARCTest, ExtractT1SavesToGhostAsT1)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    ASSERT_EQ(c.debug_list_tag(1), ARC_T1);
+
+    auto v = c.extract(1);
+
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, 10);
+    EXPECT_FALSE(c.contains(1));
+    EXPECT_TRUE(c.debug_in_ghost(1));
+    EXPECT_FALSE(c.debug_ghost_is_t2(1));
+    EXPECT_EQ(c.debug_t1().size(), 0u);
+
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, ExtractT2SavesToGhostAsT2)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.get(1);
+    ASSERT_EQ(c.debug_list_tag(1), ARC_T2);
+
+    auto v = c.extract(1);
+
+    ASSERT_TRUE(v.has_value());
+    EXPECT_EQ(*v, 10);
+    EXPECT_FALSE(c.contains(1));
+    EXPECT_TRUE(c.debug_in_ghost(1));
+    EXPECT_TRUE(c.debug_ghost_is_t2(1));
+    EXPECT_EQ(c.debug_t2().size(), 0u);
+    
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, Contains)
+{
+    init(4);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+
+    EXPECT_TRUE(c.contains(1));
+    EXPECT_FALSE(c.contains(999));
+
+    EXPECT_EQ(c.debug_t1().size(), 2u);
+    EXPECT_EQ(c.debug_t2().size(), 0u);
+    EXPECT_EQ(c.debug_b1().size(), 0u);
+    EXPECT_EQ(c.debug_b2().size(), 0u);
+
+
+    check_arc_structure(c, "unit");
+}
+
+
+
+TEST_F(ARCTest, ReinsertAfterExtractT1ReturnsToT1)
+{
+    init(2);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+
+    ASSERT_EQ(c.debug_list_tag(1), ARC_T1);
+
+    c.extract(1);
+
+    ASSERT_TRUE(c.debug_in_ghost(1));
+    ASSERT_FALSE(c.debug_ghost_is_t2(1));
+
+    c.insert(1, 11);
+
+    EXPECT_EQ(c.debug_list_tag(1), ARC_T1);
+    EXPECT_EQ(c.debug_t1().front(), 1);
+
+
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, ReinsertAfterExtractT2ReturnsToT2)
+{
+    init(2);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.get(1);
+    ASSERT_EQ(c.debug_list_tag(1), ARC_T2);
+
+    c.extract(1);
+    ASSERT_TRUE(c.debug_in_ghost(1));
+    ASSERT_TRUE(c.debug_ghost_is_t2(1));
+
+    c.insert(1, 11);
+
+    EXPECT_EQ(c.debug_list_tag(1), ARC_T2);
+    EXPECT_EQ(c.debug_t2().front(), 1);
+    check_arc_structure(c, "unit");
+}
+
+
+
+TEST_F(ARCTest, B1HitPromotesToT2AndIncreasesP)
+{
+    init(3);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.insert(3, 30);
+
+    c.get(1);
+
+    // T1.back() = 2 to B1
+    auto ev4 = c.insert(4, 40);
+    ASSERT_TRUE(ev4.has_value());
+    EXPECT_EQ(ev4->first, 2);
+    ASSERT_EQ(c.debug_list_tag(2), ARC_B1);
+    ASSERT_EQ(c.debug_target_t1_size(), 0u);
+
+    // p increases by 1, key moves to T2
+    // T1.back() evicted to B1
+    auto ev2 = c.insert(2, 22);
+
+    ASSERT_TRUE(ev2.has_value());
+    EXPECT_EQ(ev2->first, 3);   
+
+    EXPECT_EQ(c.debug_target_t1_size(), 1u) << "p must increase on B1 hit";
+    EXPECT_EQ(c.debug_list_tag(2), ARC_T2);
+    EXPECT_EQ(c.debug_t2().front(), 2);
+
+
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, B2HitPromotesToT2AndDecreasesP)
+{
+    init(3);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.insert(3, 30);
+
+    c.get(3);
+    c.get(2);
+    c.get(1); // T2 = [1 2 3]
+
+    // replace evicts T2.back() = 3 to B2
+    auto ev4 = c.insert(4, 40);
+    ASSERT_TRUE(ev4.has_value());
+    EXPECT_EQ(ev4->first, 3);
+    ASSERT_EQ(c.debug_list_tag(3), ARC_B2);
+
+    // replace evicts T1.back() = 4 to B1
+    auto ev5 = c.insert(5, 50);
+    ASSERT_TRUE(ev5.has_value());
+    EXPECT_EQ(ev5->first, 4);
+    ASSERT_EQ(c.debug_list_tag(4), ARC_B1);
+
+    // B1 hit so p = 1
+    auto ev4b = c.insert(4, 41);
+    ASSERT_TRUE(ev4b.has_value());
+    ASSERT_EQ(c.debug_target_t1_size(), 1u);
+
+    // B2 hit so p = 0, replace evicts T1.back() to B1
+    auto ev3 = c.insert(3, 33);
+
+    ASSERT_TRUE(ev3.has_value());
+    EXPECT_EQ(ev3->first, 5);
+
+    EXPECT_EQ(c.debug_target_t1_size(), 0u) << "p must decrease on B2 hit";
+    EXPECT_EQ(c.debug_list_tag(3), ARC_T2);
+    EXPECT_EQ(c.debug_t2().front(), 3);
+
+    check_arc_structure(c, "unit");
+}
+
+TEST_F(ARCTest, T1FullMissErasesWithoutGhost)
+{
+    init(3);
+    auto& c = *cache;
+
+    c.insert(1, 10);
+    c.insert(2, 20);
+    c.insert(3, 30);
+    // T1 = [3 2 1], p = 0
+
+    auto ev = c.insert(4, 40);
+
+    ASSERT_TRUE(ev.has_value());
+    EXPECT_EQ(ev->first, 1);
+    EXPECT_EQ(ev->second, 10);
+
+    // 1 was erased without a ghost 
+    EXPECT_EQ(c.debug_list_tag(1), ARC_UNKNOWN);
+    EXPECT_FALSE(c.debug_in_ghost(1));
+
+    EXPECT_EQ(c.debug_t1().size(), 3u);
+    EXPECT_EQ(c.debug_t1().front(), 4);
+    check_arc_structure(c, "unit");
+}
+
+
+
+
+// --- long sequence ---
+
+
+TEST_F(ARCTest, InvTest)
 {
     constexpr std::size_t CAP       = 1024;
     constexpr int         KEY_RANGE = 4096;
     constexpr int         OPS       = 100000;
 
-    ARCCache<int, int> c(CAP);
+    init(CAP);
+    auto& c = *cache;
 
     std::mt19937 rng(1234);
     std::uniform_int_distribution<int> kd(0, KEY_RANGE - 1);
     std::uniform_int_distribution<int> od(0, 99);
+
+    std::unordered_map<int, int> access_count;
+    std::unordered_map<int, int> saved_count;
 
     std::size_t cnt_ins_new      = 0;
     std::size_t cnt_ins_existing = 0;
@@ -156,10 +477,30 @@ TEST(ARC, InvTest)
     std::size_t cnt_ext_miss     = 0;
     std::size_t cnt_contains     = 0;
 
+    auto check_semantic = [&](const std::string& ctx, int k)
+    {
+        const int tag_after = c.debug_list_tag(k);
+        if (tag_after == ARC_UNKNOWN) return;
+
+        const int cnt = access_count[k];
+
+        if (cnt <= 1)
+        {
+            EXPECT_TRUE(tag_after == ARC_T1 || tag_after == ARC_B1)
+                << ctx << " key " << k << " seen " << cnt
+                << " time(s), tagged " << tag_name(tag_after);
+        }
+
+        else
+        {
+            EXPECT_TRUE(tag_after == ARC_T2 || tag_after == ARC_B2)
+                << ctx << " key " << k << " seen " << cnt
+                << " times, tagged " << tag_name(tag_after);
+        }
+    };
+
     for (int i = 0; i < OPS; i++)
     {
-        DumpOnFailure guard(c);
-
         const int k = kd(rng);
         const int o = od(rng);
 
@@ -174,7 +515,8 @@ TEST(ARC, InvTest)
 
         if (o < 50)
         {
-            const std::size_t before_res = c.debug_t1().size() + c.debug_t2().size();
+            const std::size_t before_res   = c.debug_t1().size() + c.debug_t2().size();
+            const bool was_in_ghost = c.debug_in_ghost(k);
 
             auto ev = c.insert(k, i);
 
@@ -227,6 +569,39 @@ TEST(ARC, InvTest)
                     EXPECT_EQ(c.debug_t2().front(), k) << ctx;
                 }
             }
+
+            // --- semantic counter ---
+            // accessed once == T1 or B1
+            // accessed >1 times == T2 or B2
+            if (was_in_ghost)
+            {
+                // reinsert after extract: restore previous counter, do not increment
+                auto sit = saved_count.find(k);
+                if (sit != saved_count.end())
+                {
+                    access_count[k] = sit->second;
+                    saved_count.erase(sit);
+                }
+
+
+                else
+                {
+                    access_count[k] = 1;
+                }
+            }
+
+            else if (tag == ARC_UNKNOWN)
+            {
+                // start a fresh history
+                access_count[k] = 1;
+            }
+
+            else // hit
+            {
+                access_count[k]++;
+            }
+
+            check_semantic(ctx, k);
         }
 
         else if (o < 80)
@@ -247,6 +622,8 @@ TEST(ARC, InvTest)
                 EXPECT_EQ(c.debug_t2().front(), k) << ctx;
                 EXPECT_EQ(c.debug_list_tag(k), ARC_T2) << ctx;
                 EXPECT_LE(c.debug_t1().size(), before_t1) << ctx;
+
+                access_count[k]++;
             }
             else
             {
@@ -255,7 +632,14 @@ TEST(ARC, InvTest)
                 EXPECT_FALSE(c.contains(k)) << ctx;
                 EXPECT_EQ(c.debug_t1().size(), before_t1) << ctx;
                 EXPECT_EQ(c.debug_t2().size(), before_t2) << ctx;
+
+                if (tag == ARC_UNKNOWN)
+                {
+                    access_count[k] = 0;
+                }
             }
+
+            check_semantic(ctx, k);
         }
 
         else if (o < 95)
@@ -279,13 +663,16 @@ TEST(ARC, InvTest)
                 const bool saved_t2 = c.debug_ghost_is_t2(k);
                 if (prior_tag == ARC_T1) EXPECT_FALSE(saved_t2) << ctx;
                 if (prior_tag == ARC_T2) EXPECT_TRUE(saved_t2)  << ctx;
+
+                // save counter for a possible later reinsert
+                saved_count[k] = access_count[k];
             }
 
             else
             {
                 cnt_ext_miss++;
 
-
+                
 
                 EXPECT_EQ(c.debug_t1().size() + c.debug_t2().size(), before_res) << ctx;
             }
