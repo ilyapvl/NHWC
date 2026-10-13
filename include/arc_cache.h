@@ -38,7 +38,7 @@ private:
     std::list<K> m_b1; // ghost for T1
     std::list<K> m_b2; // ghost for T2
 
-    std::size_t m_target_t1_size;
+    double m_target_t1_size;
 
     std::unordered_map<K, Element_info> m_element_infos;
 
@@ -114,7 +114,7 @@ public:
         return false;
     }
 
-    std::size_t debug_target_t1_size() const { return m_target_t1_size; }
+    double debug_target_t1_size() const { return m_target_t1_size; }
 
     bool debug_in_ghost(const K& key) const
     {

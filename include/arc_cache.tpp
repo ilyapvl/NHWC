@@ -41,7 +41,7 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::replace(co
 
     if (m_t1.empty() && m_t2.empty()) return std::nullopt;
 
-    const bool evict_from_t1 = (current_t1_size >= 1) && ((hit_in_b2 && current_t1_size == m_target_t1_size) || (current_t1_size > m_target_t1_size));
+    const bool evict_from_t1 = (current_t1_size >= 1) && (current_t1_size > m_target_t1_size);
 
     
 
@@ -144,9 +144,9 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr
     {
         const std::size_t b1_size = m_b1.size();
         const std::size_t b2_size = m_b2.size();
-        const std::size_t delta = std::max(b2_size / b1_size, std::size_t(1));
+        const double delta = std::max(static_cast<double>(b2_size) / static_cast<double>(b1_size), 1.0);
 
-        m_target_t1_size = std::min(m_target_t1_size + delta, m_capacity);
+        m_target_t1_size = std::min(m_target_t1_size + delta, static_cast<double>(m_capacity));
 
         std::optional<std::pair<K, std::unique_ptr<const V>>> erased = replace(false);
 
@@ -166,9 +166,9 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr
     {
         const std::size_t b1_size = m_b1.size();
         const std::size_t b2_size = m_b2.size();
-        const std::size_t delta = std::max(b1_size / b2_size, std::size_t(1));
+        const double delta = std::max(static_cast<double>(b1_size) / static_cast<double>(b2_size), 1.0);
 
-        m_target_t1_size = (m_target_t1_size >= delta) ? (m_target_t1_size - delta) : 0;
+        m_target_t1_size = std::max(m_target_t1_size - delta, 0.0);
 
         std::optional<std::pair<K, std::unique_ptr<const V>>> erased = replace(true);
 
