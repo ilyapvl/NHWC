@@ -5,7 +5,7 @@ namespace cache
 {
 
 template<typename K, typename V>
-LFUCache<K, V>::LFUCache(std::size_t capacity) : Cache<K, V>(capacity) {}
+LFUCache<K, V>::LFUCache(std::size_t capacity, std::size_t ghost_capacity) : Cache<K, V>(capacity), m_ghost_info(ghost_capacity) {}
 
 template<typename K, typename V>
 void LFUCache<K, V>::increment_frequency(const K& key)

@@ -37,7 +37,7 @@ private:
         bool is_lir = false;
     };
 
-    GhostInfo<K, State> m_system_ghost { m_capacity };
+    GhostInfo<K, State> m_system_ghost;
 
     std::unordered_map<K, Element_info> m_element_infos;
 
@@ -64,7 +64,7 @@ private:
 
 
 public:
-    LIRSCache(std::size_t capacity);
+    LIRSCache(std::size_t capacity, std::size_t ghost_capacity = 0);
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 

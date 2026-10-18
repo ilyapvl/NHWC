@@ -66,15 +66,7 @@ public:
         if (!r) return std::nullopt;
         return std::make_pair(r->first, *r->second);
     }
-
-    std::optional<V> extract(const K& key)
-    {
-        auto p = extract_ptr(key);
-        
-        if (!p) return std::nullopt;
-        return *p;
-    }
-
+    
 
     virtual void dump(std::ostream& out) const = 0;
 

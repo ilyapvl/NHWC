@@ -33,7 +33,7 @@ private:
         List list = List::Q1;
     };
     
-    GhostInfo<K, State> m_system_ghost { m_capacity };
+    GhostInfo<K, State> m_system_ghost;
 
     std::list<K> m_q1;
     std::list<K> m_q2;
@@ -49,7 +49,7 @@ private:
     std::optional<std::pair<K, std::unique_ptr<const V>>> replace();
 
 public:
-    TwoQCache(std::size_t capacity);
+    TwoQCache(std::size_t capacity, std::size_t ghost_capacity = 0);
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 

@@ -25,12 +25,12 @@ private:
         int freq;
     };
     
-    GhostInfo<K, State> m_ghost_info { m_capacity };
+    GhostInfo<K, State> m_ghost_info;
 
     void increment_frequency(const K& key);
 
 public:
-    LFUCache(std::size_t capacity);
+    LFUCache(std::size_t capacity, std::size_t ghost_capacity = 0);
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 

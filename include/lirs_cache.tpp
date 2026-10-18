@@ -5,8 +5,9 @@ namespace cache
 {
 
 template<typename K, typename V>
-LIRSCache<K, V>::LIRSCache(std::size_t capacity)
+LIRSCache<K, V>::LIRSCache(std::size_t capacity, std::size_t ghost_capacity)
     : Cache<K, V>(capacity),
+    m_system_ghost(ghost_capacity),
     m_lir_capacity(get_lir_capacity(capacity)),
     m_resident_count(0),
     m_lir_count(0) {}
