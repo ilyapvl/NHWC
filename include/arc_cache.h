@@ -31,7 +31,7 @@ private:
         List list = List::T1;
     };
 
-    GhostInfo<K, State> m_system_ghost { m_capacity };
+    GhostInfo<K, State> m_system_ghost;
 
     std::list<K> m_t1; // recent
     std::list<K> m_t2; // frequent
@@ -47,7 +47,7 @@ private:
     std::optional<std::pair<K, std::unique_ptr<const V>>> replace(const bool hit_in_b2);
 
 public:
-    ARCCache(std::size_t capacity);
+    ARCCache(std::size_t capacity, std::size_t ghost_capacity = 0);
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 
