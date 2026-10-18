@@ -31,7 +31,7 @@ private:
         List list = List::T1;
     };
 
-    GhostInfo<K, State> m_system_ghost { m_capacity };
+    GhostInfo<K, State> m_system_ghost;
 
     std::list<K> m_t1; // recent
     std::list<K> m_t2; // frequent

@@ -5,7 +5,10 @@ namespace cache
 {
 
 template<typename K, typename V>
-ARCCache<K, V>::ARCCache(std::size_t capacity) : Cache<K, V>(capacity), m_target_t1_size(0) {}
+ARCCache<K, V>::ARCCache(std::size_t capacity, std::size_t ghost_capacity)
+    : Cache<K, V>(capacity),
+    m_target_t1_size(0.0),
+    m_system_ghost(ghost_capacity) {}
 
 
 
@@ -41,7 +44,10 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::replace(co
 
     if (m_t1.empty() && m_t2.empty()) return std::nullopt;
 
-    const bool evict_from_t1 = (current_t1_size >= 1) && ((hit_in_b2 && current_t1_size == m_target_t1_size) || (current_t1_size > m_target_t1_size));
+    const bool evict_from_t1 =
+        (current_t1_size > 0) &&
+        ((current_t1_size > m_target_t1_size) ||
+        (current_t1_size == m_target_t1_size && hit_in_b2));
 
     
 
@@ -122,6 +128,8 @@ std::optional<V> ARCCache<K, V>::get(const K& key)
 template<typename K, typename V>
 std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr(const K& key, std::unique_ptr<const V> vptr)
 {
+    if (!vptr) return std::nullopt;
+
     auto it = m_element_infos.find(key);
     const std::size_t resident_size = m_t1.size() + m_t2.size();
 
@@ -129,12 +137,10 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr
     // push into T2
     if (it != m_element_infos.end() && it->second.resident)
     {
-        Element_info& element_info = it->second;
-
-        remove_from_list(element_info);
-        push_to_front(m_t2, key, element_info, List::T2);
+        Element_info& info = it->second;
+        remove_from_list(info);
+        push_to_front(m_t2, key, info, List::T2);
         m_values[key] = std::move(vptr);
-
         return std::nullopt;
     }
 
@@ -142,21 +148,19 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr
     // t1 increase and erase resident
     if (it != m_element_infos.end() && it->second.list == List::B1)
     {
-        const std::size_t b1_size = m_b1.size();
-        const std::size_t b2_size = m_b2.size();
-        const std::size_t delta = std::max(b2_size / b1_size, std::size_t(1));
+        const std::size_t b1 = m_b1.size();
+        const std::size_t b2 = m_b2.size();
+        const double delta = std::max(static_cast<double>(b2) / static_cast<double>(b1), 1.0);
+        m_target_t1_size = std::min(m_target_t1_size + delta, static_cast<double>(m_capacity));
 
-        m_target_t1_size = std::min(m_target_t1_size + delta, m_capacity);
+        std::optional<std::pair<K, std::unique_ptr<const V>>> erased;
+        if (resident_size == m_capacity) erased = replace(false);
 
-        std::optional<std::pair<K, std::unique_ptr<const V>>> erased = replace(false);
-
-        Element_info& element_info = it->second;
-        remove_from_list(element_info);
-
-        push_to_front(m_t2, key, element_info, List::T2);
-        element_info.resident = true;
+        Element_info& info = it->second;
+        remove_from_list(info);
+        push_to_front(m_t2, key, info, List::T2);
+        info.resident = true;
         m_values[key] = std::move(vptr);
-
         return erased;
     }
 
@@ -164,96 +168,83 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr
     // decrease t1 and erase resident
     if (it != m_element_infos.end() && it->second.list == List::B2)
     {
-        const std::size_t b1_size = m_b1.size();
-        const std::size_t b2_size = m_b2.size();
-        const std::size_t delta = std::max(b1_size / b2_size, std::size_t(1));
+        const std::size_t b1 = m_b1.size();
+        const std::size_t b2 = m_b2.size();
+        const double delta = std::max(static_cast<double>(b1) / static_cast<double>(b2), 1.0);
+        m_target_t1_size = std::max(m_target_t1_size - delta, 0.0);
 
-        m_target_t1_size = (m_target_t1_size >= delta) ? (m_target_t1_size - delta) : 0;
+        std::optional<std::pair<K, std::unique_ptr<const V>>> erased;
+        if (resident_size == m_capacity) erased = replace(true);
 
-        std::optional<std::pair<K, std::unique_ptr<const V>>> erased = replace(true);
-
-        Element_info& element_info = it->second;
-        remove_from_list(element_info);
-
-        push_to_front(m_t2, key, element_info, List::T2);
-
-        element_info.resident = true;
+        Element_info& info = it->second;
+        remove_from_list(info);
+        push_to_front(m_t2, key, info, List::T2);
+        info.resident = true;
         m_values[key] = std::move(vptr);
-
         return erased;
     }
 
     // miss
     std::optional<std::pair<K, std::unique_ptr<const V>>> erased;
-    const std::size_t current_t1_size = m_t1.size();
-    const std::size_t b1_size = m_b1.size();
-    const std::size_t t2_size = m_t2.size();
-    const std::size_t b2_size = m_b2.size();
 
-    List target_list = List::T1;
-    auto saved = m_system_ghost.pop(key);
-    if (saved.has_value())
+    // invariants-based eviction
+    // [A] T1 + B1 == cap
+    if (m_t1.size() + m_b1.size() == m_capacity)
     {
-        target_list = saved->list;
-    }
-
-    if (current_t1_size + b1_size == m_capacity)
-    {
-        if (current_t1_size < m_capacity)
+        if (!m_b1.empty())
         {
-            K b1_victim = m_b1.back();
+            // trim LRU из B1
+            K victim = m_b1.back();
             m_b1.pop_back();
-            m_element_infos.erase(b1_victim);
-
-            if (resident_size >= m_capacity) erased = replace(false);
+            m_element_infos.erase(victim);
         }
-        
-        else
-        {
-            // t1 is full
-            K t1_victim = m_t1.back();
-            std::unique_ptr<const V> t1_vptr = std::move(m_values[t1_victim]);
 
-            m_t1.pop_back();
-            m_values.erase(t1_victim);
-            m_element_infos.erase(t1_victim);
-            erased = std::make_pair(t1_victim, std::move(t1_vptr));
+        else if (!m_t1.empty())
+        {
+            // B1 == 0, T1 == cap: evict T1
+            K victim = m_t1.back();
+
+            auto vit = m_values.find(victim);
+            if (vit != m_values.end())
+            {
+                auto vptr2 = std::move(vit->second);
+                m_values.erase(vit);
+                m_t1.pop_back();
+                m_element_infos.erase(victim);
+
+                if (!erased) erased = std::make_pair(victim, std::move(vptr2));
+            }
         }
     }
 
-
-    else // t1 + b1 < capacity
+    // [B] total == 2*cap
+    if (m_t1.size() + m_t2.size() + m_b1.size() + m_b2.size() == 2 * m_capacity)
     {
-        const std::size_t total = current_t1_size + t2_size + b1_size + b2_size;
-
-        if (total >= m_capacity)
+        if (!m_b2.empty())
         {
-            if (total == 2 * m_capacity)
-            {
-                K b2_victim = m_b2.back();
-                m_b2.pop_back();
-                m_element_infos.erase(b2_victim);
-            }
-
-            if (resident_size >= m_capacity)
-            {
-                erased = replace(false);
-            }
+            K victim = m_b2.back();
+            m_b2.pop_back();
+            m_element_infos.erase(victim);
         }
     }
 
-    Element_info& element_info = m_element_infos.try_emplace(key).first->second;
-    element_info.resident = true;
-    
-    if (target_list == List::T2) //TODO - move this into push_to_front
-        push_to_front(m_t2, key, element_info, List::T2);
-    else
-        push_to_front(m_t1, key, element_info, List::T1);
+    // [C] resident == cap
+    // replace
+    if (m_t1.size() + m_t2.size() == m_capacity)
+    {
+        auto e = replace(false);
+        if (e && !erased) erased = std::move(e);
+    }
 
+    // insert into T1
+    Element_info& info = m_element_infos.try_emplace(key).first->second;
+    info.resident = true;
+    push_to_front(m_t1, key, info, List::T1);
     m_values[key] = std::move(vptr);
 
     return erased;
 }
+
 
 template<typename K, typename V>
 std::unique_ptr<const V> ARCCache<K, V>::extract_ptr(const K& key)

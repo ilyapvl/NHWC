@@ -165,7 +165,7 @@ TEST_F(ARCTest, InsertIntoEmptyInT1)
     EXPECT_FALSE(ev.has_value());
     EXPECT_EQ(c.debug_list_tag(1), ARC_T1);
     EXPECT_EQ(c.debug_t1().front(), 1);
-    EXPECT_EQ(c.debug_target_t1_size(), 0u);
+    EXPECT_EQ(c.debug_target_t1_size(), 0.0);
 
     check_arc_structure(c, "unit");
 }
@@ -379,7 +379,7 @@ TEST_F(ARCTest, B1HitPromotesToT2AndIncreasesP)
     ASSERT_TRUE(ev4.has_value());
     EXPECT_EQ(ev4->first, 2);
     ASSERT_EQ(c.debug_list_tag(2), ARC_B1);
-    ASSERT_EQ(c.debug_target_t1_size(), 0u);
+    ASSERT_EQ(c.debug_target_t1_size(), 0.0);
 
     // p increases by 1, key moves to T2
     // T1.back() evicted to B1
@@ -388,7 +388,7 @@ TEST_F(ARCTest, B1HitPromotesToT2AndIncreasesP)
     ASSERT_TRUE(ev2.has_value());
     EXPECT_EQ(ev2->first, 3);   
 
-    EXPECT_EQ(c.debug_target_t1_size(), 1u) << "p must increase on B1 hit";
+    EXPECT_EQ(c.debug_target_t1_size(), 1.0) << "p must increase on B1 hit";
     EXPECT_EQ(c.debug_list_tag(2), ARC_T2);
     EXPECT_EQ(c.debug_t2().front(), 2);
 
@@ -424,7 +424,7 @@ TEST_F(ARCTest, B2HitPromotesToT2AndDecreasesP)
     // B1 hit so p = 1
     auto ev4b = c.insert(4, 41);
     ASSERT_TRUE(ev4b.has_value());
-    ASSERT_EQ(c.debug_target_t1_size(), 1u);
+    ASSERT_EQ(c.debug_target_t1_size(), 1.0);
 
     // B2 hit so p = 0, replace evicts T1.back() to B1
     auto ev3 = c.insert(3, 33);
@@ -432,7 +432,7 @@ TEST_F(ARCTest, B2HitPromotesToT2AndDecreasesP)
     ASSERT_TRUE(ev3.has_value());
     EXPECT_EQ(ev3->first, 5);
 
-    EXPECT_EQ(c.debug_target_t1_size(), 0u) << "p must decrease on B2 hit";
+    EXPECT_EQ(c.debug_target_t1_size(), 0.0) << "p must decrease on B2 hit";
     EXPECT_EQ(c.debug_list_tag(3), ARC_T2);
     EXPECT_EQ(c.debug_t2().front(), 3);
 
