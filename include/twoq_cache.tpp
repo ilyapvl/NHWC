@@ -5,12 +5,11 @@ namespace cache
 {
 
 template<typename K, typename V>
-TwoQCache<K, V>::TwoQCache(std::size_t capacity)
+TwoQCache<K, V>::TwoQCache(std::size_t capacity, std::size_t ghost_capacity)
     : Cache<K, V>(capacity),
+    m_system_ghost(ghost_capacity),
     m_target_q1_size(std::max<std::size_t>(1, capacity / 4)),
-    m_target_ghost_size(std::max<std::size_t>(1, capacity / 2)) {};
-
-
+    m_target_ghost_size(std::max<std::size_t>(1, capacity / 2)) {}
 
 template<typename K, typename V>
 void TwoQCache<K, V>::remove_from_list(Element_info& info)
@@ -44,45 +43,47 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> TwoQCache<K, V>::replace()
 
     assert(m_target_q1_size < m_capacity);
 
-    K victim_key;
+    const bool demote_q1 = m_q2.empty() || (m_q1.size() > m_target_q1_size);
 
-    if (m_q1.size() > m_target_q1_size)
+    if (demote_q1)
     {
-        assert(!m_q1.empty());
+        if (m_q1.empty()) return std::nullopt;
 
-        victim_key = m_q1.back();
-        m_ghost.push_front(victim_key);
+        K victim_key = m_q1.back();
         m_q1.pop_back();
 
+        auto vit = m_values.find(victim_key);
+        if (vit == m_values.end()) return std::nullopt;
+
+        auto vptr = std::move(vit->second);
+        m_values.erase(vit);
+
+        m_ghost.push_front(victim_key);
         Element_info& info = m_element_infos.at(victim_key);
         info.it = m_ghost.begin();
         info.list = List::GHOST;
         info.is_resident = false;
+
+        trim_ghost();
+
+        return std::make_pair(victim_key, std::move(vptr));
     }
 
     else
     {
-        assert(!m_q2.empty());
-
-        victim_key = m_q2.back();
+        K victim_key = m_q2.back();
         m_q2.pop_back();
+
+        auto vit = m_values.find(victim_key);
+        if (vit == m_values.end()) return std::nullopt;
+
+        auto vptr = std::move(vit->second);
+        m_values.erase(vit);
         m_element_infos.erase(victim_key);
+
+        return std::make_pair(victim_key, std::move(vptr));
     }
-
-    auto vit = m_values.find(victim_key);
-    assert(vit != m_values.end() && vit->second);
-
-    auto vptr = std::move(vit->second);
-    m_values.erase(vit);
-
-    trim_ghost();
-
-    return std::make_pair(victim_key, std::move(vptr));
 }
-
-
-
-
 
 template<typename K, typename V>
 bool TwoQCache<K, V>::contains(const K& key) const
@@ -98,10 +99,15 @@ std::optional<V> TwoQCache<K, V>::get(const K& key)
     if (it == m_element_infos.end() || !it->second.is_resident) return std::nullopt;
 
     Element_info& info = it->second;
-    remove_from_list(info);
-    m_q2.push_front(key);
-    info.it = m_q2.begin();
-    info.list = List::Q2;
+
+    // q2 = LRU, q1 = FIFO
+    if (info.list == List::Q2)
+    {
+        remove_from_list(info);
+        m_q2.push_front(key);
+        info.it = m_q2.begin();
+        info.list = List::Q2;
+    }
 
     auto vit = m_values.find(key);
     if (vit == m_values.end()) return std::nullopt;
@@ -117,51 +123,44 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> TwoQCache<K, V>::insert_pt
 {
     auto it = m_element_infos.find(key);
 
+    // hit
     if (it != m_element_infos.end() && it->second.is_resident)
     {
         Element_info& info = it->second;
-        remove_from_list(info);
 
-        m_q2.push_front(key);
-        info.it = m_q2.begin();
+        if (info.list == List::Q2)
+        {
+            remove_from_list(info);
+            m_q2.push_front(key);
+            info.it   = m_q2.begin();
+            info.list = List::Q2;
+        }
 
-        info.list = List::Q2;
         m_values[key] = std::move(vptr);
         return std::nullopt;
     }
 
+
+    auto saved = m_system_ghost.pop(key);
+    const bool system_says_q2 = saved.has_value() && saved->list == List::Q2;
+
     const bool was_in_ghost = (it != m_element_infos.end()) && (it->second.list == List::GHOST);
 
-    bool target_q2 = was_in_ghost;
-    auto saved = m_system_ghost.pop(key);
-
-    if (saved.has_value())
+    if (was_in_ghost)
     {
-        if (saved->list == List::Q2) target_q2 = true;
+        m_ghost.erase(it->second.it);
     }
 
-    std::optional<std::pair<K, std::unique_ptr<const V>>> evicted = replace();
+    auto evicted = replace();
 
-
-    it = m_element_infos.find(key);
-
-    Element_info& info = (was_in_ghost && it != m_element_infos.end() && it->second.list == List::GHOST)
-            ? it->second
-            : m_element_infos.try_emplace(key).first->second;
-
-
-    if (info.list == List::GHOST)
+    if (was_in_ghost || system_says_q2)
     {
-        m_ghost.erase(info.it);
-        info.list = List::None;
-    }
-
-    if (target_q2)
-    {
+        Element_info& info = m_element_infos.try_emplace(key).first->second;
         m_q2.push_front(key);
 
         info.it = m_q2.begin();
         info.list = List::Q2;
+        info.is_resident = true;
     }
 
 
@@ -169,14 +168,16 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> TwoQCache<K, V>::insert_pt
 
     else
     {
+        Element_info& info = m_element_infos.try_emplace(key).first->second;
+
         m_q1.push_front(key);
 
         info.it = m_q1.begin();
         info.list = List::Q1;
+        info.is_resident = true;
     }
 
 
-    info.is_resident = true;
 
     m_values[key] = std::move(vptr);
     return evicted;
@@ -216,9 +217,9 @@ void TwoQCache<K, V>::dump(std::ostream& out) const
 {
     out << "TwoQCache (size=" << (m_q1.size() + m_q2.size())
         << "/" << m_capacity
-        << ", |A1|=" << m_q1.size()
-        << ", |Am|=" << m_q2.size()
-        << ", |A1out|=" << m_ghost.size()
+        << ", |q1|=" << m_q1.size()
+        << ", |q2|=" << m_q2.size()
+        << ", |ghost|=" << m_ghost.size()
         << ", Kin=" << m_target_q1_size
         << ", Kout=" << m_target_ghost_size << ")\n";
 
