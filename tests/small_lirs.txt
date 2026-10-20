@@ -1,0 +1,103 @@
+algorithm LIRS
+capacity 10
+
+ins 38 0 >/ none
+ins 24 10 >/ none
+get 49 >/ miss
+ins 26 30 >/ none
+cntn 30 >/ false
+ins 26 50 >/ none
+ins 48 60 >/ none
+get 16 >/ miss
+cntn 47 >/ false
+ins 12 90 >/ none
+get 38 >/ 0
+ins 39 110 >/ none
+get 41 >/ miss
+cntn 3 >/ false
+cntn 12 >/ true
+ins 43 150 >/ none
+get 14 >/ miss
+ins 42 170 >/ none
+ins 28 180 >/ none
+ins 13 190 >/ none
+get 12 >/ 90
+ins 49 210 >/ erase 13 190
+cntn 31 >/ false
+get 25 >/ miss
+ins 16 240 >/ erase 49 210
+get 44 >/ miss
+cntn 22 >/ false
+ins 19 270 >/ erase 16 240
+ins 18 280 >/ erase 19 270
+ins 34 290 >/ erase 18 280
+ins 38 300 >/ none
+get 3 >/ miss
+ins 47 320 >/ erase 34 290
+get 47 >/ 320
+get 10 >/ miss
+ins 18 350 >/ erase 24 10
+get 43 >/ 150
+get 20 >/ miss
+get 34 >/ miss
+ins 33 390 >/ erase 26 50
+ins 49 400 >/ erase 33 390
+cntn 4 >/ false
+ins 17 420 >/ erase 48 60
+ins 0 430 >/ erase 17 420
+ins 41 440 >/ erase 0 430
+get 1 >/ miss
+ins 30 460 >/ erase 41 440
+cntn 9 >/ false
+ins 26 480 >/ erase 30 460
+ins 36 490 >/ erase 26 480
+ins 20 500 >/ erase 36 490
+cntn 49 >/ true
+cntn 41 >/ false
+cntn 2 >/ false
+ins 2 540 >/ erase 20 500
+ins 3 550 >/ erase 2 540
+cntn 36 >/ false
+get 42 >/ 170
+ins 45 580 >/ erase 3 550
+get 18 >/ 350
+cntn 17 >/ false
+cntn 45 >/ true
+cntn 20 >/ false
+get 49 >/ 400
+ins 19 640 >/ erase 45 580
+cntn 19 >/ true
+get 41 >/ miss
+cntn 20 >/ false
+get 1 >/ miss
+ins 17 690 >/ erase 38 300
+cntn 34 >/ false
+cntn 39 >/ true
+cntn 12 >/ true
+ins 47 730 >/ none
+ins 45 740 >/ erase 39 110
+ins 45 750 >/ none
+get 47 >/ 730
+ins 39 770 >/ erase 28 180
+ins 18 780 >/ none
+cntn 34 >/ false
+ins 38 800 >/ erase 39 770
+ins 17 810 >/ none
+ins 19 820 >/ none
+ins 35 830 >/ erase 38 800
+ins 26 840 >/ erase 35 830
+cntn 23 >/ false
+ins 1 860 >/ erase 12 90
+ins 14 870 >/ erase 1 860
+ins 42 880 >/ none
+ins 47 890 >/ none
+ins 32 900 >/ erase 14 870
+ins 48 910 >/ erase 32 900
+ins 30 920 >/ erase 48 910
+get 19 >/ 820
+get 9 >/ miss
+get 49 >/ 400
+ins 17 960 >/ none
+cntn 3 >/ false
+cntn 46 >/ false
+ins 47 990 >/ none

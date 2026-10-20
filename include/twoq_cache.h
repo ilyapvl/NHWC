@@ -104,35 +104,25 @@ public:
         return s && s->list == List::Q2;
     }
 
-    // every element_infohas a valld iterator pointing at its key
-    bool debug_iterators() const
+    bool debug_iterator_valid(const K& key) const
     {
-        for (const auto& [k, info] : m_element_infos)
+        auto it = m_element_infos.find(key);
+        if (it == m_element_infos.end()) return false;
+
+        const Element_info& info = it->second;
+
+        switch (info.list)
         {
-            switch (info.list)
-            {
-                case List::Q1:
-                    if (info.it == m_q1.end() || *info.it != k) return false;
-                    break;
-
-                case List::Q2:
-                    if (info.it == m_q2.end() || *info.it != k) return false;
-                    break;
-
-                case List::GHOST:
-                    if (info.it == m_ghost.end() || *info.it != k) return false;
-                    break;
-
-                case List::None:
-                    return false;
-            }
+            case List::Q1:
+                return info.it != m_q1.end() && *info.it == key;
+            case List::Q2:
+                return info.it != m_q2.end() && *info.it == key;
+            case List::GHOST:
+                return info.it != m_ghost.end() && *info.it == key;
+            case List::None:
+                return false;
         }
-
-
-
-
-
-        return true;
+        return false;
     }
 };
 

@@ -5,6 +5,8 @@
 #include "lirs_cache.h"
 #include "arc_cache.h"
 #include "twoq_cache.h"
+#include "cache_test_invariants.h"
+
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -14,7 +16,7 @@
 using namespace cache;
 
 static std::vector<std::string> test_file_paths;
-
+static std::size_t g_invariant_stride = 100;
 
 
 class DumpOnFailure
@@ -38,15 +40,14 @@ private:
 
 struct Operation
 {
-    enum class Func { Insert, Get, Extract, Contains, Invalid };
+    enum class Func { Insert, Get, Contains, Invalid };
 
-    Func func;
+    Func func = Func::Invalid;
     int key = 0;
     int value = 0;
 
     std::string expected;
-    
-    
+
     int erase_key   = 0;
     int erase_value = 0;
 };
@@ -61,9 +62,8 @@ struct TestCase
 
 Operation::Func func_from_string(const std::string s)
 {
-    if (s == "ins") return Operation::Func::Insert;
-    else if (s == "get") return Operation::Func::Get;
-    else if (s == "ext") return Operation::Func::Extract;
+    if (s == "ins")  return Operation::Func::Insert;
+    else if (s == "get")  return Operation::Func::Get;
     else if (s == "cntn") return Operation::Func::Contains;
 
     return Operation::Func::Invalid;
@@ -128,11 +128,17 @@ TestCase parse_file(const std::string path, TestCase& test)
 }
 
 const std::vector<std::string> default_files = {
-    "../tests/lru_sequence.txt",
-    "../tests/lfu_sequence.txt",
-    "../tests/lirs_sequence.txt",
-    "../tests/arc_sequence.txt",
-    "../tests/twoq_sequence.txt",
+    "../tests/large_lru.txt",
+    "../tests/large_lfu.txt",
+    "../tests/large_lirs.txt",
+    "../tests/large_arc.txt",
+    "../tests/large_twoq.txt",
+
+    "../tests/small_lru.txt",
+    "../tests/small_lfu.txt",
+    "../tests/small_lirs.txt",
+    "../tests/small_arc.txt",
+    "../tests/small_twoq.txt",
 
 };
 
@@ -146,11 +152,27 @@ static std::unique_ptr<Cache<int, int>> make_test_cache(const std::string& algor
                                                         std::size_t capacity)
 {
     if (algorithm == "LRU")  return std::make_unique<LRUCache<int, int>>(capacity);
-    if (algorithm == "LFU")  return std::make_unique<LFUCache<int, int>>(capacity);
-    if (algorithm == "LIRS") return std::make_unique<LIRSCache<int, int>>(capacity);
-    if (algorithm == "ARC")  return std::make_unique<ARCCache<int, int>>(capacity);
-    if (algorithm == "2Q")   return std::make_unique<TwoQCache<int, int>>(capacity);
+    if (algorithm == "LFU")  return std::make_unique<LFUCache<int, int>>(capacity, 0);
+    if (algorithm == "LIRS") return std::make_unique<LIRSCache<int, int>>(capacity, 0);
+    if (algorithm == "ARC")  return std::make_unique<ARCCache<int, int>>(capacity, 0);
+    if (algorithm == "2Q")   return std::make_unique<TwoQCache<int, int>>(capacity, 0);
     return nullptr;
+}
+
+void check_invariants(Cache<int, int>& cache, const std::string& algorithm, const std::string& what)
+{
+    if (algorithm == "LRU")
+        cache_test::check_lru_structure(static_cast<LRUCache<int, int>&>(cache), what);
+    else if (algorithm == "LFU")
+        cache_test::check_lfu_structure(static_cast<LFUCache<int, int>&>(cache), what);
+    else if (algorithm == "LIRS")
+        cache_test::check_lirs_structure(static_cast<LIRSCache<int, int>&>(cache), what);
+    else if (algorithm == "ARC")
+        cache_test::check_arc_structure(static_cast<ARCCache<int, int>&>(cache), what);
+    else if (algorithm == "2Q")
+        cache_test::check_twoq_structure(static_cast<TwoQCache<int, int>&>(cache), what);
+    else
+        FAIL() << "unknown algorithm: " << algorithm;
 }
 
 
@@ -171,7 +193,9 @@ void run_one_file(const std::string path)
 
         const Operation& op = test.ops[i];
 
-        SCOPED_TRACE("step " + std::to_string(i)+ " op " + std::to_string(static_cast<int>(op.func)) + " key " + std::to_string(op.key));
+        SCOPED_TRACE("step " + std::to_string(i) + " op " +
+                     std::to_string(static_cast<int>(op.func)) +
+                     " key " + std::to_string(op.key));
 
         switch (op.func)
         {
@@ -221,24 +245,6 @@ void run_one_file(const std::string path)
                 break;
             }
 
-        case Operation::Func::Extract:
-            {
-                auto v = cache->extract(op.key);
-                if (op.expected == "miss")
-                {
-                    EXPECT_FALSE(v.has_value());
-                }
-                
-                else
-                {
-                    ASSERT_TRUE(v.has_value());
-
-                    EXPECT_EQ(v.value(), std::stoi(op.expected));
-                }
-
-                break;
-            }
-
         case Operation::Func::Contains:
             {
                 const bool expected = (op.expected == "true");
@@ -252,6 +258,16 @@ void run_one_file(const std::string path)
                 FAIL();
             }
 
+        }
+
+        const bool last      = (i + 1 == test.ops.size());
+        const bool stride_ok = (g_invariant_stride > 0 && (i + 1) % g_invariant_stride == 0);
+
+        if (stride_ok || last)
+        {
+            SCOPED_TRACE("invariant check after step " + std::to_string(i + 1));
+            check_invariants(*cache, test.algorithm, "step " + std::to_string(i + 1));
+            if (::testing::Test::HasFailure()) return;
         }
     }
 }
@@ -279,15 +295,15 @@ TEST(FromFile, SequenceTest)
 
 int main(int argc, char** argv)
 {
-    if (argc > 1)
+    for (int i = 1; i < argc; i++)
     {
-        for (int i = 1; i < argc; i++) 
-        {
-            std::string arg = argv[i];
-            std::string a;
-            
-            if (arg.rfind("file=", 0) == 0) test_file_paths.push_back(arg.substr(5));
-        }
+        std::string arg = argv[i];
+
+        if (arg.rfind("file=", 0) == 0)
+            test_file_paths.push_back(arg.substr(5));
+
+        else if (arg.rfind("--stride=", 0) == 0)
+            g_invariant_stride = std::stoul(arg.substr(9));
     }
 
     

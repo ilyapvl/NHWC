@@ -185,6 +185,10 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr
     }
 
     // miss
+    List target_list = List::T1;
+    auto saved = m_system_ghost.pop(key);
+    if (saved.has_value()) target_list = saved->list;
+
     std::optional<std::pair<K, std::unique_ptr<const V>>> erased;
 
     // invariants-based eviction
@@ -239,7 +243,12 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> ARCCache<K, V>::insert_ptr
     // insert into T1
     Element_info& info = m_element_infos.try_emplace(key).first->second;
     info.resident = true;
-    push_to_front(m_t1, key, info, List::T1);
+    
+    if (target_list == List::T2)
+        push_to_front(m_t2, key, info, List::T2);
+    else
+        push_to_front(m_t1, key, info, List::T1);
+
     m_values[key] = std::move(vptr);
 
     return erased;
