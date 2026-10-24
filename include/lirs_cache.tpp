@@ -277,22 +277,18 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> LIRSCache<K, V>::insert_pt
     auto saved = m_system_ghost.pop(key);
     const bool ghost_promotes_to_lir = saved.has_value() && saved->is_lir;
 
-
-    if (ghost_promotes_to_lir && m_last_promoted.has_value())
+    // LIR -> HIR if the reinserted was LIR before, otherwise ignore
+    if (ghost_promotes_to_lir && saved->promoted.has_value())
     {
-        K last_promoted = m_last_promoted.value();
-        auto it = m_element_infos.find(last_promoted);
-
+        K promoted = *saved->promoted;
+        auto it = m_element_infos.find(promoted);
         if (it != m_element_infos.end() && it->second.resident && it->second.lir)
         {
-            Element_info& last_promoted_info = it->second;
-            last_promoted_info.lir = false;
+            it->second.lir = false;
             m_lir_count--;
-            move_to_queue_front(last_promoted, last_promoted_info);
+            move_to_queue_front(promoted, it->second);
         }
     }
-
-    m_last_promoted.reset();
 
 
 
@@ -352,13 +348,12 @@ std::unique_ptr<const V> LIRSCache<K, V>::extract_ptr(const K& key)
 
     Element_info& info = it->second;
 
-    m_system_ghost.save(key, State{info.lir});
+    const bool was_lir = info.lir;
 
     auto vit = m_values.find(key);
     auto vptr = (vit != m_values.end()) ? std::move(vit->second) : nullptr;
 
-
-    if (info.lir)
+    if (was_lir)
     {
         m_lir_count--;
     }
@@ -369,8 +364,9 @@ std::unique_ptr<const V> LIRSCache<K, V>::extract_ptr(const K& key)
     m_element_infos.erase(it);
     m_values.erase(key);
 
-    m_last_promoted.reset();
-    m_last_promoted = restore_lir_after_extraction();
+    auto promoted = restore_lir_after_extraction();
+
+    m_system_ghost.save(key, State{was_lir, promoted});
 
     cut_stack();
 
