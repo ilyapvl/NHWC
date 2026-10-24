@@ -407,7 +407,161 @@ TEST_F(LIRSTest, UpdateValueKeepsSize)
     EXPECT_EQ(c.debug_lir_count(), before_lir);
     EXPECT_EQ(*c.debug_values().at(2), 222);
 
-    
+
+    check_lirs_structure(c, "unit");
+}
+
+
+
+// reinsertion
+
+
+static void warmup_two_hir(LIRSCache<int, int>& c)
+{
+    const std::size_t lir_cap = expected_lir_capacity(c.capacity());
+
+    for (std::size_t i = 1; i <= lir_cap; i++)
+        c.insert(static_cast<int>(i), static_cast<int>(i) * 10);
+
+    c.insert(1001, 10010);
+    c.insert(1002, 10020);
+    // LIR   = [1..lir_cap]
+    // HIR   = [1001, 1002]
+    // queue = [1002, 1001]
+}
+
+
+TEST_F(LIRSTest, GhostPromotedSingleExtractCreatesEntry)
+{
+    init(200);
+    auto& c = *cache;
+    warmup_two_hir(c);
+
+    EXPECT_FALSE(c.debug_in_ghost(1));
+    EXPECT_FALSE(c.debug_ghost_has_promoted(1));
+
+    auto v = c.extract_ptr(1);
+    ASSERT_NE(v, nullptr);
+
+    // removes LIR
+    // restore promotes queue.front()
+    EXPECT_TRUE(c.debug_element_infos().at(1002).lir);
+    EXPECT_FALSE(c.debug_element_infos().at(1001).lir);
+
+    EXPECT_TRUE(c.debug_in_ghost(1));
+    EXPECT_TRUE(c.debug_ghost_is_lir(1));
+    EXPECT_TRUE(c.debug_ghost_has_promoted(1));
+    EXPECT_EQ(c.debug_ghost_promoted_key(1), std::optional<int>(1002));
+
+    check_lirs_structure(c, "unit");
+}
+
+
+TEST_F(LIRSTest, GhostPromotedSingleReinsert)
+{
+    init(200);
+    auto& c = *cache;
+    warmup_two_hir(c);
+
+    ASSERT_NE(c.extract_ptr(1), nullptr);
+
+    ASSERT_TRUE(c.debug_ghost_has_promoted(1));
+    ASSERT_TRUE(c.debug_element_infos().at(1002).lir);
+
+    c.insert(1, 11);
+
+    EXPECT_TRUE(c.contains(1));
+    EXPECT_TRUE(c.debug_element_infos().at(1).lir);
+    EXPECT_FALSE(c.debug_element_infos().at(1002).lir);
+    EXPECT_FALSE(c.debug_element_infos().at(1001).lir);
+
+    EXPECT_FALSE(c.debug_in_ghost(1));
+    EXPECT_FALSE(c.debug_ghost_has_promoted(1));
+
+    check_lirs_structure(c, "unit");
+}
+
+
+TEST_F(LIRSTest, GhostPromotedTwoExtractsSameOrder)
+{
+    init(200);
+    auto& c = *cache;
+    warmup_two_hir(c);
+
+    ASSERT_NE(c.extract_ptr(1), nullptr); // 1002
+    ASSERT_NE(c.extract_ptr(2), nullptr); // 1001
+
+    ASSERT_TRUE(c.debug_ghost_has_promoted(1));
+    ASSERT_TRUE(c.debug_ghost_has_promoted(2));
+    EXPECT_EQ(c.debug_ghost_promoted_key(1), std::optional<int>(1002));
+    EXPECT_EQ(c.debug_ghost_promoted_key(2), std::optional<int>(1001));
+
+    c.insert(1, 11);
+    EXPECT_FALSE(c.debug_element_infos().at(1002).lir);
+    EXPECT_TRUE(c.debug_element_infos().at(1001).lir);
+    EXPECT_FALSE(c.debug_in_ghost(1));
+    EXPECT_TRUE(c.debug_in_ghost(2));
+
+    c.insert(2, 21);
+    EXPECT_FALSE(c.debug_element_infos().at(1001).lir);
+    EXPECT_FALSE(c.debug_in_ghost(2));
+
+    check_lirs_structure(c, "unit");
+}
+
+
+TEST_F(LIRSTest, GhostPromotedTwoExtractsReverseOrder)
+{
+    init(200);
+    auto& c = *cache;
+    warmup_two_hir(c);
+
+    ASSERT_NE(c.extract_ptr(1), nullptr); // 1002
+    ASSERT_NE(c.extract_ptr(2), nullptr); // 1001
+    ASSERT_TRUE(c.debug_ghost_has_promoted(1));
+    ASSERT_TRUE(c.debug_ghost_has_promoted(2));
+    ASSERT_TRUE(c.debug_element_infos().at(1002).lir);
+    ASSERT_TRUE(c.debug_element_infos().at(1001).lir);
+
+    // reinsert 2 -> 1001
+    c.insert(2, 21);
+
+    EXPECT_TRUE(c.debug_element_infos().at(2).lir);
+    EXPECT_FALSE(c.debug_element_infos().at(1001).lir);
+    EXPECT_TRUE(c.debug_element_infos().at(1002).lir);
+    EXPECT_TRUE(c.debug_in_ghost(1));
+    EXPECT_FALSE(c.debug_in_ghost(2));
+
+    // reinsert 1 -> 1002
+    c.insert(1, 11);
+
+    EXPECT_TRUE(c.debug_element_infos().at(1).lir);
+    EXPECT_FALSE(c.debug_element_infos().at(1002).lir);
+    EXPECT_FALSE(c.debug_in_ghost(1));
+
+    check_lirs_structure(c, "unit");
+}
+
+
+TEST_F(LIRSTest, GhostPromotedExtractHirDoesNotCreatePromotion)
+{
+    init(200);
+    auto& c = *cache;
+    warmup_two_hir(c);
+
+    ASSERT_FALSE(c.debug_element_infos().at(1001).lir);
+
+    auto v = c.extract_ptr(1001);
+    ASSERT_NE(v, nullptr);
+
+    EXPECT_TRUE(c.debug_in_ghost(1001));
+    EXPECT_FALSE(c.debug_ghost_is_lir(1001));
+    EXPECT_FALSE(c.debug_ghost_has_promoted(1001));
+
+    c.insert(1001, 10011);
+    EXPECT_FALSE(c.debug_element_infos().at(1001).lir);
+    EXPECT_FALSE(c.debug_in_ghost(1001));
+
     check_lirs_structure(c, "unit");
 }
 

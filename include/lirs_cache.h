@@ -7,6 +7,7 @@
 #include <optional>
 #include <cassert>
 
+#include <unordered_map>
 #include "cache.h"
 
 namespace cache
@@ -35,6 +36,7 @@ private:
     struct State
     {
         bool is_lir = false;
+        std::optional<K> promoted = std::nullopt;
     };
 
     GhostInfo<K, State> m_system_ghost;
@@ -60,7 +62,6 @@ private:
     void cut_stack();
 
     std::optional<K> restore_lir_after_extraction();
-    std::optional<K> m_last_promoted; //FIXME - temporal solution
 
 
 public:
@@ -106,6 +107,19 @@ public:
 
     std::size_t debug_ghost_size()     const { return m_system_ghost.debug_size(); }
     std::size_t debug_ghost_capacity() const { return m_system_ghost.debug_capacity(); }
+
+    bool debug_ghost_has_promoted(const K& key) const
+    {
+        auto s = m_system_ghost.debug_get(key);
+        return s && s->promoted.has_value();
+    }
+
+    std::optional<K> debug_ghost_promoted_key(const K& key) const
+    {
+        auto s = m_system_ghost.debug_get(key);
+        if (!s || !s->promoted.has_value()) return std::nullopt;
+        return *s->promoted;
+    }
 
 };
 
