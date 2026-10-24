@@ -24,18 +24,13 @@ enum cache_err
     INVALID_CAPACITY = 1,
 };
 
-inline int validate_capacity(const std::string& algorithm, long long int capacity)
-{
-    if (capacity < 0 && algorithm == "LRU") return INVALID_CAPACITY;
-    else if (capacity < 2 && algorithm == "2Q") return INVALID_CAPACITY;
-    else if (capacity < 1 && algorithm != "LRU" && algorithm != "2Q") return INVALID_CAPACITY;
-    
+enum class CacheAlgorithm { LRU, LFU, LIRS, ARC, TwoQ, Invalid };
 
-    return NO_ERR;
-}
+std::string algorithm_from_enum(CacheAlgorithm algorithm);
 
+CacheAlgorithm algorithm_from_string(const std::string& algorithm);
 
-
+int validate_capacity(CacheAlgorithm algorithm, long long int capacity);
 
 
 template <typename K, typename V>
@@ -60,7 +55,7 @@ public:
 
     std::optional<std::pair<K, V>> insert(const K& key, const V& value)
     {
-        auto p = std::make_unique<const V>(std::move(value));
+        auto p = std::make_unique<const V>(value);
         auto r = insert_ptr(key, std::move(p));
 
         if (!r) return std::nullopt;
@@ -69,6 +64,17 @@ public:
     
 
     virtual void dump(std::ostream& out) const = 0;
+
+
+
+    V access(const K& key, std::function<V(const K&)> slow_get_page)
+    {
+        if (auto v = get(key)) return *v;
+
+        V value = slow_get_page(key);
+        insert(key, value);
+        return value;
+    }
 
 
     const std::unordered_map<K, std::unique_ptr<const V>>& debug_values() const

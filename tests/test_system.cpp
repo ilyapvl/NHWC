@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "cache_system.h"
 #include "cache.h"
+#include "cache_system_invariants.h"
 
 #include <fstream>
 #include <sstream>
@@ -106,10 +107,10 @@ void run_one_file(const std::string& path)
     test = parse_file(path);
 
 
-    CacheSystem<int, int> chs([](const int key) { return key; });
+    CacheSystem<int, int> chs([](const int key) { return 100 * key; });
 
     for (const auto& lvl : test.levels)
-        chs.add_cache(lvl.algorithm, lvl.capacity);
+        chs.add_cache(cache::algorithm_from_string(lvl.algorithm), lvl.capacity);
 
     for (std::size_t i = 0; i < test.requests.size(); ++i)
     {
@@ -127,6 +128,9 @@ void run_one_file(const std::string& path)
         {
             EXPECT_EQ(chs.get_last_hit_level(), static_cast<int>(access.expected_level));
         }
+
+        cache_test::check_system_structure(chs, "step " + std::to_string(i + 1));
+        if (::testing::Test::HasFailure()) return;
     }
 }
 

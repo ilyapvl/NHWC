@@ -159,22 +159,6 @@ static std::unique_ptr<Cache<int, int>> make_test_cache(const std::string& algor
     return nullptr;
 }
 
-void check_invariants(Cache<int, int>& cache, const std::string& algorithm, const std::string& what)
-{
-    if (algorithm == "LRU")
-        cache_test::check_lru_structure(static_cast<LRUCache<int, int>&>(cache), what);
-    else if (algorithm == "LFU")
-        cache_test::check_lfu_structure(static_cast<LFUCache<int, int>&>(cache), what);
-    else if (algorithm == "LIRS")
-        cache_test::check_lirs_structure(static_cast<LIRSCache<int, int>&>(cache), what);
-    else if (algorithm == "ARC")
-        cache_test::check_arc_structure(static_cast<ARCCache<int, int>&>(cache), what);
-    else if (algorithm == "2Q")
-        cache_test::check_twoq_structure(static_cast<TwoQCache<int, int>&>(cache), what);
-    else
-        FAIL() << "unknown algorithm: " << algorithm;
-}
-
 
 void run_one_file(const std::string path)
 {
@@ -266,7 +250,7 @@ void run_one_file(const std::string path)
         if (stride_ok || last)
         {
             SCOPED_TRACE("invariant check after step " + std::to_string(i + 1));
-            check_invariants(*cache, test.algorithm, "step " + std::to_string(i + 1));
+            cache_test::check_invariants(*cache, algorithm_from_string(test.algorithm), "step " + std::to_string(i + 1));
             if (::testing::Test::HasFailure()) return;
         }
     }

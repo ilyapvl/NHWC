@@ -1,4 +1,5 @@
 #include "cache_system.h"
+#include "cache_factory.h"
 #include "lirs_cache.h"
 #include "opt_cache.h"
 #include <iostream>
@@ -79,7 +80,7 @@ bool read_config(const std::string& filename, int& level_count,
             return false;
         }
 
-        const int e = validate_capacity(algorithms[i], capacities[i]);
+        const int e = validate_capacity(algorithm_from_string(algorithms[i]), capacities[i]);
 
         if (e != NO_ERR)
         {
@@ -140,7 +141,11 @@ int main(const int argc, const char* argv[])
     }
 
     
+    auto stndl = make_cache<int, int>(CacheAlgorithm::LIRS, 10);
 
+    for (int i = 0; i < 100; i++) stndl->access(i % 10, slow_get_page);
+
+    stndl->dump(std::cout);
 
 
     CacheSystem<int, int> chs(slow_get_page);
@@ -148,7 +153,7 @@ int main(const int argc, const char* argv[])
 
     for (int i = 0; i < level_count; i++)
     {
-        chs_err = chs.add_cache(algorithms[i], capacities[i]);
+        chs_err = chs.add_cache(algorithm_from_string(algorithms[i]), capacities[i]);
         if (chs_err) return 1;
     }
     

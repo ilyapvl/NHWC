@@ -28,7 +28,7 @@ bool run(const std::vector<int>& sequence, const std::vector<LevelSpec>& levels,
     cache::CacheSystem<int, int> cs([](const int& key) { return key; });
     for (const auto& lvl : levels)
     {
-        cs.add_cache(lvl.algorithm, lvl.capacity);
+        cs.add_cache(cache::algorithm_from_string(lvl.algorithm), lvl.capacity);
     }
 
     

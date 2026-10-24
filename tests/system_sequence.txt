@@ -1,10 +1,52 @@
-levels 2
-level LRU 2
-level LRU 3
+levels 3
+level LRU 1
+level LFU 2
+level ARC 3
 
-access 5 -> miss 5
-access 6 -> miss 6
-access 5 -> hit 0 5
-access 7 -> miss 7
-access 5 -> hit 0 5
-access 6 -> hit 1 6
+access 1 arr miss 100
+access 2 arr miss 200
+access 3 arr miss 300
+
+access 1 arr hit 1 100
+
+access 3 arr hit 1 300
+
+access 3 arr hit 0 300
+
+access 1 arr hit 1 100
+
+access 4 arr miss 400
+
+access 2 arr hit 2 200
+
+access 5 arr miss 500
+
+access 3 arr hit 2 300
+
+access 4 arr hit 2 400
+
+access 6 arr miss 600
+
+access 1 arr miss 100
+
+access 3 arr hit 2 300
+
+access 1 arr hit 1 100
+
+access 1 arr hit 0 100
+
+access 2 arr miss 200
+
+access 7 arr miss 700
+
+access 6 arr hit 2 600
+
+access 7 arr hit 1 700
+
+access 7 arr hit 0 700
+
+access 8 arr miss 800
+
+access 6 arr hit 1 600
+
+access 6 arr hit 0 600

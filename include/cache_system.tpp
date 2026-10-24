@@ -5,52 +5,45 @@ namespace cache
 {
 
 template<typename K, typename V>
-int CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capacity)
+int CacheSystem<K, V>::add_cache(const CacheAlgorithm algorithm, std::size_t capacity)
 {
     int err = validate_capacity(algorithm, capacity);
     if (err)
     {
-        std::cerr << "Invalid capacity for cache " << algorithm << ": " << capacity << std::endl;
+        std::cerr << "Invalid capacity for cache " << algorithm_from_enum(algorithm) << ": " << capacity << std::endl;
         return err;
     }
 
-    if (algorithm == "LRU")
+    if (algorithm == CacheAlgorithm::LRU)
     {
         m_levels.push_back(std::make_unique<LRUCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
     }
-    else if (algorithm == "LFU")
+    else if (algorithm == CacheAlgorithm::LFU)
     {
-        m_levels.push_back(std::make_unique<LFUCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<LFUCache<K, V>>(capacity, capacity));
     }
-    else if (algorithm == "LIRS")
+    else if (algorithm == CacheAlgorithm::LIRS)
     {
-        m_levels.push_back(std::make_unique<LIRSCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<LIRSCache<K, V>>(capacity, capacity));
     }
-    else if (algorithm == "ARC")
+    else if (algorithm == CacheAlgorithm::ARC)
     {
-        m_levels.push_back(std::make_unique<ARCCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<ARCCache<K, V>>(capacity, capacity));
     }
-    else if (algorithm == "2Q")
+    else if (algorithm == CacheAlgorithm::TwoQ)
     {
-        m_levels.push_back(std::make_unique<TwoQCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<TwoQCache<K, V>>(capacity, capacity));
     }
     else
     {
-        std::cerr << "Unknown algorithm \"" << algorithm << "\"" << std::endl;
+        std::cerr << "Unknown algorithm"  << std::endl;
         return INVALID_ALGORITHM;
     }
 
+    m_algorithms.push_back(algorithm);
+    m_hits.push_back(0);
     
+    return NO_ERR;
 }
 
 template<typename K, typename V>

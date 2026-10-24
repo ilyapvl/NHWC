@@ -1,43 +1,23 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.24)
 project(cache_system)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(main src/main.cpp)
+add_executable(main src/main.cpp src/cache.cpp)
 
 target_include_directories(main PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
-target_sources(main PRIVATE
-    include/cache.h
-    include/cache.tpp
-    include/lru_cache.h
-    include/lru_cache.tpp
-    include/lfu_cache.h
-    include/lfu_cache.tpp
-    include/lirs_cache.h
-    include/lirs_cache.tpp
-    include/opt_cache.h
-    include/opt_cache.tpp
-    include/arc_cache.h
-    include/arc_cache.tpp
-    include/twoq_cache.h
-    include/twoq_cache.tpp
-    include/cache_system.h
-    include/cache_system.tpp
-)
-
-
-
 
 add_executable(cache_bench
+    src/cache.cpp
     bench/main.cpp
     bench/workloads.cpp
     bench/runner.cpp
     bench/search.cpp
 )
 target_include_directories(cache_bench PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_compile_options(cache_bench PRIVATE -O3)
+target_compile_options(cache_bench PRIVATE -O2)
 
 
 
@@ -59,6 +39,7 @@ enable_testing()
 
 add_executable(cache_test
     tests/test_cache.cpp
+    src/cache.cpp
 )
 target_include_directories(cache_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(cache_test PRIVATE GTest::gtest)
@@ -73,6 +54,7 @@ add_test(NAME cache_test COMMAND cache_test)
 
 add_executable(cache_system_test
     tests/test_system.cpp
+    src/cache.cpp
 )
 target_include_directories(cache_system_test PRIVATE
     ${CMAKE_SOURCE_DIR}/include
@@ -89,6 +71,7 @@ add_test(NAME cache_system_test COMMAND cache_system_test)
 
 add_executable(optimal_cache_test
     tests/test_optimal_cache.cpp
+    src/cache.cpp
 )
 target_include_directories(optimal_cache_test PRIVATE
     ${CMAKE_SOURCE_DIR}/include
@@ -106,7 +89,7 @@ add_test(NAME optimal_cache_test COMMAND optimal_cache_test)
 
 
 # LRU
-add_executable(test_lru tests/test_lru.cpp)
+add_executable(test_lru tests/test_lru.cpp src/cache.cpp)
 target_include_directories(test_lru PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
@@ -115,7 +98,7 @@ add_test(NAME test_lru COMMAND test_lru)
 
 
 # LFU
-add_executable(test_lfu tests/test_lfu.cpp)
+add_executable(test_lfu tests/test_lfu.cpp src/cache.cpp)
 target_include_directories(test_lfu PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
@@ -124,7 +107,7 @@ add_test(NAME test_lfu COMMAND test_lfu)
 
 
 # LIRS
-add_executable(test_lirs tests/test_lirs.cpp)
+add_executable(test_lirs tests/test_lirs.cpp src/cache.cpp)
 target_include_directories(test_lirs PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
@@ -133,7 +116,7 @@ add_test(NAME test_lirs COMMAND test_lirs)
 
 
 # ARC
-add_executable(test_arc tests/test_arc.cpp)
+add_executable(test_arc tests/test_arc.cpp src/cache.cpp)
 target_include_directories(test_arc PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
@@ -142,7 +125,7 @@ add_test(NAME test_arc COMMAND test_arc)
 
 
 #2Q
-add_executable(test_twoq tests/test_twoq.cpp)
+add_executable(test_twoq tests/test_twoq.cpp src/cache.cpp)
 target_include_directories(test_twoq PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
@@ -152,12 +135,21 @@ add_test(NAME test_twoq COMMAND test_twoq)
 
 
 # system
-add_executable(test_unit_system tests/test_unit_system.cpp)
+add_executable(test_unit_system tests/test_unit_system.cpp src/cache.cpp)
 target_include_directories(test_unit_system PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(test_unit_system PRIVATE GTest::gtest)
 add_test(NAME test_unit_system COMMAND test_unit_system)
+
+
+# system inv
+add_executable(test_system_invariants tests/test_system_invariants.cpp src/cache.cpp)
+target_include_directories(test_system_invariants PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+)
+target_link_libraries(test_system_invariants PRIVATE GTest::gtest)
+add_test(NAME test_system_invariants COMMAND test_system_invariants)
 
 
 

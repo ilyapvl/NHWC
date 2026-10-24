@@ -16,6 +16,8 @@
 #include "arc_cache.h"
 #include "twoq_cache.h"
 
+using namespace cache;
+
 namespace cache_test {
 
 // ===========================================================================
@@ -506,6 +508,24 @@ inline void check_twoq_structure(const cache::TwoQCache<int,int>& c, const std::
     {
         EXPECT_FALSE(c.debug_in_ghost(k)) << "resident key " << k << " is also in system ghost";
     }
+}
+
+
+
+void check_invariants(Cache<int, int>& cache, CacheAlgorithm algorithm, const std::string& what)
+{
+    if (algorithm == CacheAlgorithm::LRU)
+        cache_test::check_lru_structure(static_cast<LRUCache<int, int>&>(cache), what);
+    else if (algorithm == CacheAlgorithm::LFU)
+        cache_test::check_lfu_structure(static_cast<LFUCache<int, int>&>(cache), what);
+    else if (algorithm == CacheAlgorithm::LIRS)
+        cache_test::check_lirs_structure(static_cast<LIRSCache<int, int>&>(cache), what);
+    else if (algorithm == CacheAlgorithm::ARC)
+        cache_test::check_arc_structure(static_cast<ARCCache<int, int>&>(cache), what);
+    else if (algorithm == CacheAlgorithm::TwoQ)
+        cache_test::check_twoq_structure(static_cast<TwoQCache<int, int>&>(cache), what);
+    else
+        FAIL() << "unknown algorithm: " << algorithm_from_enum(algorithm);
 }
 
 
