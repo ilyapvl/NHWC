@@ -147,6 +147,10 @@ int main(const int argc, const char* argv[])
 
     stndl->dump(std::cout);
 
+    stndl->clear();
+
+    stndl->dump(std::cout);
+
 
     CacheSystem<int, int> chs(slow_get_page);
     int chs_err = 0;

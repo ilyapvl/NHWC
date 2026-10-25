@@ -53,6 +53,7 @@ public:
     virtual std::unique_ptr<const V> extract_ptr(const K& key) = 0;
     virtual std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) = 0;
     virtual std::optional<V> get(const K& key) = 0;
+    virtual void clear() = 0;
 
     std::optional<std::pair<K, V>> insert(const K& key, const V& value)
     {

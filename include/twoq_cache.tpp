@@ -210,6 +210,18 @@ std::unique_ptr<const V> TwoQCache<K, V>::extract_ptr(const K& key)
 
 
 
+template<typename K, typename V>
+void TwoQCache<K, V>::clear()
+{
+    m_q1.clear();
+    m_q2.clear();
+    m_ghost.clear();
+    m_element_infos.clear();
+    m_system_ghost.clear();
+
+    m_values.clear();
+}
+
 
 
 template<typename K, typename V>

@@ -86,6 +86,17 @@ std::optional<V> LRUCache<K, V>::get(const K& key)
 }
 
 
+
+template<typename K, typename V>
+void LRUCache<K, V>::clear()
+{
+    m_order.clear();
+    m_positions.clear();
+    m_values.clear();
+}
+
+
+
 template<typename K, typename V>
 void LRUCache<K, V>::dump(std::ostream& out) const
 {

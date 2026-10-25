@@ -376,6 +376,23 @@ std::unique_ptr<const V> LIRSCache<K, V>::extract_ptr(const K& key)
 
 
 template<typename K, typename V>
+void LIRSCache<K, V>::clear()
+{
+    m_stack.clear();
+    m_queue.clear();
+
+    m_element_infos.clear();
+    m_system_ghost.clear();
+
+    m_resident_count = 0;
+    m_lir_count      = 0;
+
+    m_values.clear();
+}
+
+
+
+template<typename K, typename V>
 void LIRSCache<K, V>::dump(std::ostream& out) const
 {
     std::size_t ghost_count = 0;

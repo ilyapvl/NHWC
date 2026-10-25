@@ -55,6 +55,7 @@ public:
     std::unique_ptr<const V> extract_ptr(const K& key) override;
     std::optional<V> get(const K& key) override;
     std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
+    void clear() override;
 
 
 

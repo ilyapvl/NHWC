@@ -107,6 +107,18 @@ V CacheSystem<K, V>::access(const K& key)
     return result;
 }
 
+
+template<typename K, typename V>
+void CacheSystem<K, V>::clear()
+{
+    for (auto& lvl : m_levels) lvl->clear();
+
+    for (auto& h : m_hits) h = 0;
+
+    m_last_hit_level = 0;
+}
+
+
 }
 
 #endif // CACHE_SYSTEM_TPP

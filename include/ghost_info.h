@@ -63,6 +63,12 @@ public:
         return s;
     }
 
+    void clear()
+    {
+        m_map.clear();
+        m_order.clear();
+    }
+
 
     bool debug_contains(const K& key) const
     {

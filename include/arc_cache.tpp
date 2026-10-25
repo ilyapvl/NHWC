@@ -281,6 +281,22 @@ std::unique_ptr<const V> ARCCache<K, V>::extract_ptr(const K& key)
 
 
 template<typename K, typename V>
+void ARCCache<K, V>::clear()
+{
+    m_t1.clear();
+    m_t2.clear();
+    m_b1.clear();
+    m_b2.clear();
+    m_element_infos.clear();
+    m_system_ghost.clear();
+
+    m_target_t1_size = 0.0;
+
+    m_values.clear();
+}
+
+
+template<typename K, typename V>
 void ARCCache<K, V>::dump(std::ostream& out) const
 {
     out << "ARCCache (size=" << (m_t1.size() + m_t2.size())

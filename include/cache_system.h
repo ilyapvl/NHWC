@@ -42,6 +42,8 @@ public:
     int add_cache(CacheAlgorithm algorithm, std::size_t capacity);
 
     V access(const K& key);
+    void clear();
+    
     int get_hits(int level) const { return m_hits.at(level); }
     int get_last_hit_level() const { return m_last_hit_level; }
     const std::vector<std::unique_ptr<Cache<K, V>>>& levels() const

@@ -25,7 +25,7 @@ private:
         int freq;
     };
     
-    GhostInfo<K, State> m_ghost_info;
+    GhostInfo<K, State> m_system_ghost;
 
     void increment_frequency(const K& key);
 
@@ -38,6 +38,7 @@ public:
     std::unique_ptr<const V> extract_ptr(const K& key) override;
     std::optional<V> get(const K& key) override;
     std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
+    void clear() override;
 
     void dump(std::ostream& out) const override;
 
@@ -56,17 +57,17 @@ public:
 
     bool debug_in_ghost(const K& key) const
     {
-        return m_ghost_info.debug_contains(key);
+        return m_system_ghost.debug_contains(key);
     }
 
     int debug_ghost_freq(const K& key) const
     {
-        auto s = m_ghost_info.debug_get(key);
+        auto s = m_system_ghost.debug_get(key);
         return s ? s->freq : 0;
     }
 
-    std::size_t debug_ghost_size() const { return m_ghost_info.debug_size(); }
-    std::size_t debug_ghost_capacity() const { return m_ghost_info.debug_capacity(); }
+    std::size_t debug_ghost_size() const { return m_system_ghost.debug_size(); }
+    std::size_t debug_ghost_capacity() const { return m_system_ghost.debug_capacity(); }
 };
 
 }
