@@ -152,7 +152,7 @@ bool parse_args(int argc, char** argv, Options& o, std::string& err)
             long long v = 0;
             if (!parse_num(val, v) || v <= 0)
             {
-                err = "--max-iter must be in [1, " + std::to_string(INT_MAX)+ "], got '" + val + "'";
+                err = "--max-iter must be >= 1, got '" + val + "'";
                 return false;
             }
             o.max_iter = static_cast<int>(v);
