@@ -38,27 +38,6 @@ private:
 
 
 
-
-
-class DumpOnFailure
-{
-public:
-    DumpOnFailure(Cache<int, int>& cache) : m_cache(cache) {}
-
-    ~DumpOnFailure()
-    {
-        if (!::testing::Test::HasFailure() || s_already_reported) return;
-        s_already_reported = true;
-        m_cache.dump(std::cerr);
-    }
-
-private:
-    Cache<int, int>& m_cache;
-    static inline bool s_already_reported = false;
-};
-
-
-
 struct Operation
 {
     enum class Func { Insert, Get, Contains, Invalid };
