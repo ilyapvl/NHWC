@@ -16,6 +16,9 @@
 #include <utility>
 #include <iostream>
 
+namespace cache
+{
+
 enum cache_system_err
 {
     INVALID_ALGORITHM = 1001,
@@ -26,6 +29,7 @@ class CacheSystem
 {
 private:
     std::vector<std::unique_ptr<Cache<K, V>>> m_levels;
+    
     std::function<V(const K&)> m_slow_get_page;
     std::vector<int> m_hits;
     int m_last_hit_level = 0;
@@ -33,10 +37,14 @@ private:
     
 
 public:
-    CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page);
-    int add_cache(const std::string& algorithm, std::size_t capacity);
+    explicit CacheSystem(std::function<V(const K&)> slow_get_page);
+
+    std::vector<CacheAlgorithm> m_algorithms;
+    int add_cache(CacheAlgorithm algorithm, std::size_t capacity);
 
     V access(const K& key);
+    void clear();
+    
     int get_hits(int level) const { return m_hits.at(level); }
     int get_last_hit_level() const { return m_last_hit_level; }
     const std::vector<std::unique_ptr<Cache<K, V>>>& levels() const
@@ -45,6 +53,8 @@ public:
     }
 
 };
+
+}
 
 #include "cache_system.tpp"
 

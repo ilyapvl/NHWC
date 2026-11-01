@@ -8,7 +8,9 @@
 #include <functional>
 #include <string>
 #include <vector>
-#include <utility>
+
+namespace cache_bench
+{
 
 struct Config
 {
@@ -48,5 +50,7 @@ struct SearchResult
 using ObjectiveFn = std::function<double(const Config&, EvalResult&)>;
 
 SearchResult hill_climb(const Config& start, const ObjectiveFn& obj, const SearchOptions& opts);
+
+}
 
 #endif

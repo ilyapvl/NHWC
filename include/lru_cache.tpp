@@ -1,6 +1,9 @@
 #ifndef LRU_CACHE_TPP
 #define LRU_CACHE_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
 LRUCache<K, V>::LRUCache(std::size_t capacity) : Cache<K, V>(capacity) {}
 
@@ -83,6 +86,17 @@ std::optional<V> LRUCache<K, V>::get(const K& key)
 }
 
 
+
+template<typename K, typename V>
+void LRUCache<K, V>::clear()
+{
+    m_order.clear();
+    m_positions.clear();
+    m_values.clear();
+}
+
+
+
 template<typename K, typename V>
 void LRUCache<K, V>::dump(std::ostream& out) const
 {
@@ -102,6 +116,8 @@ void LRUCache<K, V>::dump(std::ostream& out) const
             out << key << "=NOVALUE ";
     }
     out << '\n';
+}
+
 }
 
 #endif // LRU_CACHE_TPP

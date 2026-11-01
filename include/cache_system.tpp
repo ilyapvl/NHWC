@@ -1,81 +1,77 @@
 #ifndef CACHE_SYSTEM_TPP
 #define CACHE_SYSTEM_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
-int CacheSystem<K, V>::add_cache(const std::string& algorithm, std::size_t capacity)
+int CacheSystem<K, V>::add_cache(const CacheAlgorithm algorithm, std::size_t capacity)
 {
     int err = validate_capacity(algorithm, capacity);
     if (err)
     {
-        std::cerr << "Invalid capacity for cache " << algorithm << ": " << capacity << std::endl;
+        std::cerr << "Invalid capacity for cache " << algorithm_from_enum(algorithm) << ": " << capacity << std::endl;
         return err;
     }
 
-    if (algorithm == "LRU")
+    if (algorithm == CacheAlgorithm::LRU)
     {
         m_levels.push_back(std::make_unique<LRUCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
     }
-    else if (algorithm == "LFU")
+    else if (algorithm == CacheAlgorithm::LFU)
     {
-        m_levels.push_back(std::make_unique<LFUCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<LFUCache<K, V>>(capacity, capacity));
     }
-    else if (algorithm == "LIRS")
+    else if (algorithm == CacheAlgorithm::LIRS)
     {
-        m_levels.push_back(std::make_unique<LIRSCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<LIRSCache<K, V>>(capacity, capacity));
     }
-    else if (algorithm == "ARC")
+    else if (algorithm == CacheAlgorithm::ARC)
     {
-        m_levels.push_back(std::make_unique<ARCCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<ARCCache<K, V>>(capacity, capacity));
     }
-    else if (algorithm == "2Q")
+    else if (algorithm == CacheAlgorithm::TwoQ)
     {
-        m_levels.push_back(std::make_unique<TwoQCache<K, V>>(capacity));
-        m_hits.push_back(0);
-        return NO_ERR;
+        m_levels.push_back(std::make_unique<TwoQCache<K, V>>(capacity, capacity));
     }
     else
     {
-        std::cerr << "Unknown algorithm \"" << algorithm << "\"" << std::endl;
+        std::cerr << "Unknown algorithm"  << std::endl;
         return INVALID_ALGORITHM;
     }
 
+    m_algorithms.push_back(algorithm);
+    m_hits.push_back(0);
     
+    return NO_ERR;
 }
 
 template<typename K, typename V>
-CacheSystem<K, V>::CacheSystem(std::size_t size, std::function<V(const K&)> slow_get_page)
-    : m_slow_get_page(std::move(slow_get_page)),
-      m_hits(size, 0)
+CacheSystem<K, V>::CacheSystem(std::function<V(const K&)> slow_get_page) : m_slow_get_page(std::move(slow_get_page))
 {
 }
 
 template<typename K, typename V>
 V CacheSystem<K, V>::access(const K& key)
 {
-    for (int i = 0; i < m_levels.size(); i++)
+    // lvl 0 hit
+    if (!m_levels.empty())
     {
-        auto v = m_levels[i]->get(key);
-        if (!v) continue;
-
-        V result = std::move(*v);
-
-        if (i == 0)
+        auto v = m_levels[0]->get(key);
+        if (v)
         {
             m_last_hit_level = 0;
             m_hits[0]++;
-            return result;
+            return *v;
         }
+    }
 
+    for (std::size_t i = 1; i < m_levels.size(); i++)
+    {
         auto extracted = m_levels[i]->extract_ptr(key);
         if (!extracted) continue;
+
+        V result = *extracted;
 
         std::optional<std::pair<K, std::unique_ptr<const V>>> moving = std::make_pair(key, std::move(extracted));
 
@@ -93,6 +89,8 @@ V CacheSystem<K, V>::access(const K& key)
         return result;
     }
 
+    // miss
+
     V value = m_slow_get_page(key);
 
     auto vptr = std::make_unique<const V>(std::move(value));
@@ -107,7 +105,20 @@ V CacheSystem<K, V>::access(const K& key)
     }
 
     return result;
-    
+}
+
+
+template<typename K, typename V>
+void CacheSystem<K, V>::clear()
+{
+    for (auto& lvl : m_levels) lvl->clear();
+
+    for (auto& h : m_hits) h = 0;
+
+    m_last_hit_level = 0;
+}
+
+
 }
 
 #endif // CACHE_SYSTEM_TPP

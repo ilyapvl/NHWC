@@ -1,0 +1,20 @@
+zipf  z_040  key_max=279552  alpha=0.40
+zipf  z_050  key_max=279552  alpha=0.50
+zipf  z_060  key_max=279552  alpha=0.60
+zipf  z_070  key_max=279552  alpha=0.70
+zipf  z_080  key_max=279552  alpha=0.80
+zipf  z_090  key_max=279552  alpha=0.90
+zipf  z_100  key_max=279552  alpha=1.00
+
+hotcold  hc_15_8k   hot_ratio=0.15  hot_keys=8192  cold_keys=279552
+hotcold  hc_25_8k   hot_ratio=0.25  hot_keys=8192  cold_keys=279552
+hotcold  hc_35_8k   hot_ratio=0.35  hot_keys=8192  cold_keys=279552
+hotcold  hc_50_8k   hot_ratio=0.50  hot_keys=8192  cold_keys=279552
+
+scan  scan_15_8k   hot_ratio=0.15  hot_keys=8192  scan_length=2000000
+scan  scan_25_8k   hot_ratio=0.25  hot_keys=8192  scan_length=2000000
+scan  scan_35_8k   hot_ratio=0.35  hot_keys=8192  scan_length=2000000
+
+phase  ph_3x  phases=4  keys_per_phase=104832
+phase  ph_4x  phases=4  keys_per_phase=139776
+phase  ph_6x  phases=4  keys_per_phase=209664

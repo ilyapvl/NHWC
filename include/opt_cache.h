@@ -6,10 +6,11 @@
 #include <list>
 #include <vector>
 #include <cstddef>
+#include <map>
 #include <set>
-#include <ostream>
-#include <limits>
-#include <iterator>
+
+namespace cache
+{
 
 template<typename K, typename V>
 class OptimalCache
@@ -38,6 +39,8 @@ public:
 
     void dump(std::ostream& out) const;
 };
+
+}
 
 #include "opt_cache.tpp"
 

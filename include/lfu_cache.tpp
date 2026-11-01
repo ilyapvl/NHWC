@@ -1,8 +1,11 @@
 #ifndef LFU_CACHE_TPP
 #define LFU_CACHE_TPP
 
+namespace cache
+{
+
 template<typename K, typename V>
-LFUCache<K, V>::LFUCache(std::size_t capacity) : Cache<K, V>(capacity) {}
+LFUCache<K, V>::LFUCache(std::size_t capacity, std::size_t ghost_capacity) : Cache<K, V>(capacity), m_system_ghost(ghost_capacity) {}
 
 template<typename K, typename V>
 void LFUCache<K, V>::increment_frequency(const K& key)
@@ -34,7 +37,7 @@ std::unique_ptr<const V> LFUCache<K, V>::extract_ptr(const K& key)
     if (it == m_key_to_pair.end()) return nullptr;
 
     int freq = it->second.first;
-    m_ghost_info.save(key, State{freq});
+    m_system_ghost.save(key, State{freq});
 
     auto list_it = it->second.second;
     auto vit = m_values.find(key);
@@ -93,7 +96,7 @@ std::optional<std::pair<K, std::unique_ptr<const V>>> LFUCache<K, V>::insert_ptr
 
     int freq = 1;
 
-    auto g = m_ghost_info.pop(key);
+    auto g = m_system_ghost.pop(key);
 
 
     if (g.has_value())
@@ -122,6 +125,15 @@ std::optional<V> LFUCache<K, V>::get(const K& key)
 
 
 
+template<typename K, typename V>
+void LFUCache<K, V>::clear()
+{
+    m_freq_to_keys.clear();
+    m_key_to_pair.clear();
+    m_system_ghost.clear();
+    m_values.clear();
+}
+
 
 
 template<typename K, typename V>
@@ -145,6 +157,6 @@ void LFUCache<K, V>::dump(std::ostream& out) const
 
 
 
-
+}
 
 #endif // LFU_CACHE_TPP

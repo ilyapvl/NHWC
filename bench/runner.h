@@ -5,6 +5,9 @@
 #include <string>
 #include <vector>
 
+namespace cache_bench
+{
+
 struct LevelSpec
 {
     std::string algorithm;
@@ -28,5 +31,7 @@ struct RunResult
 };
 
 bool run(const std::vector<int>& sequence, const std::vector<LevelSpec>& levels, const AccessCosts& costs, RunResult& out);
+
+}
 
 #endif

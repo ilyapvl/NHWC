@@ -1,6 +1,8 @@
 #ifndef OPTIMAL_CACHE_TPP
 #define OPTIMAL_CACHE_TPP
 
+namespace cache
+{
 
 template <typename K, typename V>
 OptimalCache<K, V>::OptimalCache(std::size_t capacity, const std::vector<K>& sequence)
@@ -98,6 +100,8 @@ void OptimalCache<K, V>::dump(std::ostream& out) const
             out << key << "(next@" << next << ")";
     }
     out << '\n';
+}
+
 }
 
 

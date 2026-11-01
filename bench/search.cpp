@@ -4,6 +4,9 @@
 #include <set>
 #include <sstream>
 
+namespace cache_bench
+{
+
 void add_algo_mutations(const Config& c, const std::vector<std::string>& pool, std::vector<Config>& out)
 {
     for (std::size_t i = 0; i < c.algorithms.size(); ++i)
@@ -82,11 +85,11 @@ SearchResult hill_climb(const Config& start,
         log.open(opts.log_csv, std::ios::app);
         if (log.tellp() == 0)
         {
-            log << "workload,iteration,config,objective,hit_rate\n";
+            log << "trace,iteration,config,objective,hit_rate\n";
         }
     }
 
-    const std::string wname = opts.workload_label.empty() ? workload_type_name(opts.workload) : opts.workload_label;
+    const std::string wname = opts.workload_label.empty() ? "trace" : opts.workload_label;
 
     SearchResult result;
     result.best = start;
@@ -154,4 +157,6 @@ SearchResult hill_climb(const Config& start,
     }
 
     return result;
+}
+
 }

@@ -7,7 +7,11 @@
 #include <optional>
 #include <cassert>
 
+#include <unordered_map>
 #include "cache.h"
+
+namespace cache
+{
 
 template<typename K, typename V>
 class LIRSCache : public Cache<K, V>
@@ -32,9 +36,10 @@ private:
     struct State
     {
         bool is_lir = false;
+        std::optional<K> promoted = std::nullopt;
     };
 
-    GhostInfo<K, State> m_system_ghost { m_capacity };
+    GhostInfo<K, State> m_system_ghost;
 
     std::unordered_map<K, Element_info> m_element_infos;
 
@@ -42,8 +47,7 @@ private:
     std::size_t m_resident_count;
     std::size_t m_lir_count;
 
-    static constexpr std::size_t LIR_HIR_RATIO = 100;
-    static constexpr std::size_t MIN_HIR = 1;
+    
 
     std::size_t get_lir_capacity(std::size_t capacity);
     void move_to_stack_front(const K& key, Element_info& element_info);
@@ -58,25 +62,70 @@ private:
     void cut_stack();
 
     std::optional<K> restore_lir_after_extraction();
-    std::optional<K> m_last_promoted; //FIXME - temporal solution
 
 
 public:
-    LIRSCache(std::size_t capacity);
+    LIRSCache(std::size_t capacity, std::size_t ghost_capacity = 0);
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
+
+    static constexpr std::size_t LIR_HIR_RATIO = 100;
+    static constexpr std::size_t MIN_HIR = 1;
 
     bool contains(const K& key) const override;
     std::unique_ptr<const V> extract_ptr(const K& key) override;
     std::optional<V> get(const K& key) override;
     std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
+    void clear() override;
 
     void dump(std::ostream& out) const override;
+
+
+
+
+    const std::list<K>& debug_stack() const { return m_stack; }
+    const std::list<K>& debug_queue() const { return m_queue; }
+
+    const std::unordered_map<K, Element_info>& debug_element_infos() const
+    {
+        return m_element_infos;
+    }
+
+    std::size_t debug_lir_capacity()   const { return m_lir_capacity; }
+    std::size_t debug_lir_count()      const { return m_lir_count; }
+    std::size_t debug_resident_count() const { return m_resident_count; }
+
+    bool debug_in_ghost(const K& key) const
+    {
+        return m_system_ghost.debug_contains(key);
+    }
+
+    bool debug_ghost_is_lir(const K& key) const
+    {
+        auto s = m_system_ghost.debug_get(key);
+        return s && s->is_lir;
+    }
+
+    std::size_t debug_ghost_size()     const { return m_system_ghost.debug_size(); }
+    std::size_t debug_ghost_capacity() const { return m_system_ghost.debug_capacity(); }
+
+    bool debug_ghost_has_promoted(const K& key) const
+    {
+        auto s = m_system_ghost.debug_get(key);
+        return s && s->promoted.has_value();
+    }
+
+    std::optional<K> debug_ghost_promoted_key(const K& key) const
+    {
+        auto s = m_system_ghost.debug_get(key);
+        if (!s || !s->promoted.has_value()) return std::nullopt;
+        return *s->promoted;
+    }
 
 };
 
 
-
+}
 
 #include "lirs_cache.tpp"
 

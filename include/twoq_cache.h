@@ -13,7 +13,8 @@
 #include <ostream>
 #include <algorithm>
 
-
+namespace cache
+{
 
 template<typename K, typename V>
 class TwoQCache : public Cache<K, V>
@@ -33,7 +34,7 @@ private:
         List list = List::Q1;
     };
     
-    GhostInfo<K, State> m_system_ghost { m_capacity };
+    GhostInfo<K, State> m_system_ghost;
 
     std::list<K> m_q1;
     std::list<K> m_q2;
@@ -49,7 +50,7 @@ private:
     std::optional<std::pair<K, std::unique_ptr<const V>>> replace();
 
 public:
-    TwoQCache(std::size_t capacity);
+    TwoQCache(std::size_t capacity, std::size_t ghost_capacity = 0);
     using Cache<K, V>::m_capacity;
     using Cache<K, V>::m_values;
 
@@ -57,11 +58,77 @@ public:
     std::unique_ptr<const V> extract_ptr(const K& key) override;
     std::optional<V> get(const K& key) override;
     std::optional<std::pair<K, std::unique_ptr<const V>>> insert_ptr(const K& key, std::unique_ptr<const V> vptr) override;
+    void clear() override;
 
     void dump(std::ostream& out) const override;
+
+
+
+
+
+
+    const std::list<K>& debug_q1()    const { return m_q1; }
+    const std::list<K>& debug_q2()    const { return m_q2; }
+    const std::list<K>& debug_ghost() const { return m_ghost; }
+
+    std::size_t debug_target_q1_size()    const { return m_target_q1_size; }
+    std::size_t debug_target_ghost_size() const { return m_target_ghost_size; }
+    std::size_t debug_infos_size()        const { return m_element_infos.size(); }
+
+    
+    // 0    not found
+    // 1    Q1
+    // 2    Q2
+    // 3    GHOST
+    int debug_list_tag(const K& key) const
+    {
+        auto it = m_element_infos.find(key);
+        if (it == m_element_infos.end()) return -1;
+
+        switch (it->second.list)
+        {
+            case List::Q1:    return 1;
+            case List::Q2:    return 2;
+            case List::GHOST: return 3;
+            case List::None:  return 0;
+        }
+        return 0;
+    }
+
+    bool debug_in_ghost(const K& key) const
+    {
+        return m_system_ghost.debug_contains(key);
+    }
+
+    bool debug_ghost_is_q2(const K& key) const
+    {
+        auto s = m_system_ghost.debug_get(key);
+        return s && s->list == List::Q2;
+    }
+
+    bool debug_iterator_valid(const K& key) const
+    {
+        auto it = m_element_infos.find(key);
+        if (it == m_element_infos.end()) return false;
+
+        const Element_info& info = it->second;
+
+        switch (info.list)
+        {
+            case List::Q1:
+                return info.it != m_q1.end() && *info.it == key;
+            case List::Q2:
+                return info.it != m_q2.end() && *info.it == key;
+            case List::GHOST:
+                return info.it != m_ghost.end() && *info.it == key;
+            case List::None:
+                return false;
+        }
+        return false;
+    }
 };
 
-
+}
 
 
 #include "twoq_cache.tpp"
