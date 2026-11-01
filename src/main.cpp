@@ -19,7 +19,7 @@ int slow_get_page(int key)
 
 
 bool read_config(const std::string& filename, int& level_count,
-    std::vector<std::string>& algorithms, std::vector<std::size_t>& capacities,
+    std::vector<std::string>& algorithms, std::vector<int>& capacities,
     int& num_requests, std::vector<int>& requests, std::string& err)
 {
     std::ifstream config(filename);
@@ -100,6 +100,12 @@ bool read_config(const std::string& filename, int& level_count,
         return false;
     }
 
+    if (num_requests <= 0)
+    {
+        err = "request count must be > 0";
+        return false;
+    }
+
     requests.resize(num_requests);
     for (int i = 0; i < num_requests; i++)
     {
@@ -129,7 +135,7 @@ int main(const int argc, const char* argv[])
     int num_requests = 0;
 
     std::vector<std::string> algorithms;
-    std::vector<std::size_t> capacities;
+    std::vector<int> capacities;
     std::vector<int> requests;
 
     std::string err;
@@ -142,7 +148,7 @@ int main(const int argc, const char* argv[])
 
 
 
-    
+
 
 
     CacheSystem<int, int> chs(slow_get_page);

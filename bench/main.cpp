@@ -139,20 +139,20 @@ bool parse_args(int argc, char** argv, Options& o, std::string& err)
             continue;
         }
 
-        if (a.size() >= 3 && a[0] == '-' && a[1] == 'T' && std::isdigit(static_cast<unsigned char>(a[2])))
+        else if (a.size() >= 3 && a[0] == '-' && a[1] == 'T' && std::isdigit(static_cast<unsigned char>(a[2])))
         {
             if (!next(val)) return false;
             if (!parse_indexed_flag(a, val, lat_map, err)) return false;
             continue;
         }
 
-        if (a == "--max-iter")
+        else if (a == "--max-iter")
         {
             if (!next(val)) return false;
             long long v = 0;
             if (!parse_num(val, v) || v <= 0)
             {
-                err = "--max-iter must be > 0, got '" + val + "'";
+                err = "--max-iter must be >= 1, got '" + val + "'";
                 return false;
             }
             o.max_iter = static_cast<int>(v);
@@ -174,9 +174,9 @@ bool parse_args(int argc, char** argv, Options& o, std::string& err)
         {
             if (!next(val)) return false;
             long long v = 0;
-            if (!parse_num(val, v))
+            if (!parse_num(val, v) || v <= 0)
             {
-                err = "--ops must be a number, got '" + val + "'";
+                err = "--ops must be a positive integer, got '" + val + "'";
                 return false;
             }
             o.ops = static_cast<std::size_t>(v);
@@ -288,24 +288,25 @@ bool parse_args(int argc, char** argv, Options& o, std::string& err)
         return false;
     }
 
-    if (o.trace_path.empty() && o.workloads_path.empty())
+    else if (o.trace_path.empty() && o.workloads_path.empty())
     {
         err = "either --workloads PATH or --trace PATH is required";
         return false;
     }
 
-    if (caps_map.empty())
+    else if (caps_map.empty())
     {
         err = "at least -L0 must be given";
         return false;
     }
 
-    if (lat_map.empty())
+    else if (lat_map.empty())
     {
         err = "at least -T0 must be given";
         return false;
     }
-    if (o.miss_ns == 0)
+
+    else if (o.miss_ns == 0)
     {
         err = "--miss-ns is required and must be > 0";
         return false;
