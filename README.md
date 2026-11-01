@@ -36,7 +36,7 @@ Every algorithm inherits from `Cache<K, V>` and
 - CMake 3.20 or newer
 - A C++20 compiler
 
-GoogleTest is fetched automatically via CMake`s
+GoogleTest is fetched automatically via CMake's
 `FetchContent`
 
 
@@ -109,6 +109,8 @@ for the same sequence.
 ├── include/
 │   ├── cache.h
 │   ├── cache.tpp
+│   ├── cache.cpp
+│   ├── cache_factory.h
 │   ├── cache_system.h
 │   ├── cache_system.tpp
 │   ├── lru_cache.h / .tpp
@@ -119,17 +121,12 @@ for the same sequence.
 │   ├── opt_cache.h / .tpp
 │   └── ghost_info.h
 ├── src/
+│   ├── cache.cpp
 │   └── main.cpp
+├── data/
+│   └── workloads.txt
 └── tests/
-    ├── test_optimal_cache.cpp
-    ├── test_system.cpp
-    ├── test_cache.cpp
-    ├── lru_sequence.txt
-    ├── lfu_sequence.txt
-    ├── lirs_sequence.txt
-    ├── arc_sequence.txt
-    ├── twoq_sequence.txt
-    └── system_sequence.txt
+
 ```
 
 
@@ -203,7 +200,7 @@ CacheSystem.
 
 #### `std::optional<std::pair<K, V>> insert(const K& key, const V& value)`
 
-Value based wrapper around `insert-ptr`
+Value based wrapper around `insert-ptr`. `insert` of existing key is `return std::nullopt` + update info
 
 
 #### `std::optional<V> get(const K& key)`
@@ -345,8 +342,7 @@ between them
 
 1. The element starts at level 0 with its value.
 2. `insert_ptr` puts the element in level 0. If level 0 is not full yet,
-   it returns `nullopt` and the cascade stops - the element is safely
-   resident and no further level needs to see it.
+   it returns `nullopt` and the cascade stops
 3. If level 0 was full, its own replacement policy evicts a victim. The
    victim is returned as `(K, unique_ptr<const V>)` and becomes the new
    `moving` element for level 1.
@@ -372,13 +368,13 @@ Tests are built with GoogleTest and run via CTest:
 
     ctest --output-on-failure
 
-The suite is split into three groups.
+The suite is split into several groups.
 
-### Unit tests for `OptimalCache` (`test_optimal_cache.cpp`)
+### Unit tests
 
-Self-contained `TEST` cases with hardcoded sequences. No external files needed.
+Self-contained `TEST` cases with hardcoded sequences
 
-### Scenario tests for individual caches (`test_cache.cpp`)
+### E2E tests for individual caches (`test_cache.cpp`)
 
 Each test is a plain-text file describing a single algorithm run
 
@@ -395,7 +391,7 @@ Operation lines have the form `<op> <key> [<value>] >/ <expected>`:
 - `get <key> >/ <value>` or `get <key> >/ miss`.
 - `cntn <key> >/ true` or `cntn <key> >/ false`.
 
-There are 10 included files: `large_***.txt` and `small_***.txt` for each cache. The traces were generated using [libCacheSim](https://github.com/1a1a11a/libCacheSim) (`LRU`, `LFU`, `ARC`, `2Q`, file gen_sequence.cpp`) and [LIRS2](https://github.com/zhongch4g/LIRS2) (LIRS, using `./replace` modified for step-by-step output)
+There are 10 included files: `large_***.txt` and `small_***.txt` for each cache. The traces were generated using [libCacheSim](https://github.com/1a1a11a/libCacheSim) (`LRU`, `LFU`, `ARC`, `2Q`, file `gen_sequence.cpp`) and [LIRS2](https://github.com/zhongch4g/LIRS2) (LIRS, using `./replace` modified for step-by-step output)
 
 Extra scenarios can be supplied on the command line:
 
@@ -403,15 +399,15 @@ Extra scenarios can be supplied on the command line:
 
 The `file=` prefix is repeatable. When no `file=` argument is given, the built-in list above is used.
 
-### Scenario tests for `CacheSystem` (`test_system.cpp`)
+### E2E tests for `CacheSystem` (`test_system.cpp`)
 
 Same idea, but the file describes a whole multi-level system
 
     levels <N>
     level <algo> <capacity>
     ...
-    access <key> -> hit  <level> <value>
-    access <key> -> miss <value>
+    access <key> >/ hit  <level> <value>
+    access <key> >/ miss <value>
 
 The runner builds the system, replays each `access`, and checks both the
 returned value and `get_last_hit_level()`. The default input is
@@ -453,41 +449,29 @@ optimum for the same total capacity.
 A file with one workload spec per line:
 
 
- <type> <name> key=value ... 
+ `<type> <name> key=value ...`
 
 
 Supported types:
 
 
-- uniform — keys drawn uniformly from [0, key_max).
-- zipf — single Zipf distribution with exponent alpha.
-- zipfmulti — alternating Zipf phases; parameters alphas=0.7,1.1,1.5
+`uniform` — keys drawn uniformly from [0, key_max).
+`zipf` — single Zipf distribution with exponent alpha.
+`zipfmulti` — alternating Zipf phases; parameters alphas=0.7,1.1,1.5
  and ops_per_phase=N.
-- hotcold — mixture: hot_ratio of accesses go to one of hot_keys
+`hotcold` — mixture: hot_ratio of accesses go to one of hot_keys
  hot keys, the rest to one of cold_keys cold keys.
-- scan — hot keys plus a sequential scan of scan_length keys.
-- phase — num_phases phases; each phase works over keys_per_phase
+`scan` — hot keys plus a sequential scan of scan_length keys.
+`phase` — num_phases phases; each phase works over keys_per_phase
  new keys.
 
 
 Example: file `data/workloads.txt`.
 
 
-```
-./build/cache_bench --workloads data/workloads.txt -L0 128 -T0 1 -L1 2048 -T1 4 -L2 32768 -T2 13 --miss-ns 80
-```
-
-
 #### Real trace
 
 A binary oracleGeneral trace
-
-Example:
-
-```
-./build/cache_bench --trace meta_reag.oracleGeneral --trace-max-records 10000000 -L0 128 -T0 100 -L1 2048 -T1 100000 -L2 32768 -T2 1000000 --miss-ns 10000000 --overhead-ns 1000
-```
-
 
 Record format:
 {  uint32_t timestamp;  uint64_t obj_id;  uint32_t obj_size;  int64_t next_access_vtime; }; 
@@ -536,33 +520,34 @@ from every algorithm in the pool and keeps the best result per workload.
 ### CLI
 
 
- cache_bench --workloads PATH -L0 <cap> [-L1 <cap> ...] -T0 <ns> [-T1 <ns> ...] --miss-ns <ns> [options] 
+ `./cache_bench --workloads PATH -L0 <cap> [-L1 <cap> ...] -T0 <ns> [-T1 <ns> ...] --miss-ns <ns> [options]` 
  
- cache_bench --trace PATH [--trace-max-records N] -L0 <cap> [-L1 <cap> ...] -T0 <ns> [-T1 <ns> ...] --miss-ns <ns> [options] 
+ `./cache_bench --trace PATH [--trace-max-records N] -L0 <cap> [-L1 <cap> ...] -T0 <ns> [-T1 <ns> ...] --miss-ns <ns> [options]`
+
+ Flags `--workloads` and `--trace` can't be used together.
 
 
 Required:
 
 
-- --workloads PATH or --trace PATH (mutually exclusive).
-- -L{i} N — capacity of level i. 8 levels max
-- -T{i} N — latency of level i in nanoseconds. 8 levels max
-- --miss-ns N — cost of a slow_get_page() access.
+- `--workloads PATH or --trace PATH`
+- `-L{i} N` — capacity of level i. 8 levels max
+- `-T{i} N` — latency of level i in nanoseconds. 8 levels max
+- `--miss-ns N` — cost of a slow_get_page() access.
 
 
 Optional:
 
 
-- --trace-max-records N — read at most N records from the trace
+- `--trace-max-records N` — read at most N records from the trace
  (default 0 = whole file)
-- --overhead-ns N — per-op overhead (default 20)
-- --min-levels N — minimum number of levels (default 1)
-- --max-iter N — hill-climb iteration cap per restart
-- --ops N — synthetic sequence length (default 1 000 000); ignored
+- `--overhead-ns N` — per-op overhead (default 20)
+- `--max-iter N` — hill-climb iteration cap per restart
+- `--ops N` — synthetic sequence length (default 1 000 000); ignored
  in trace mode
-- --seed S — RNG seed (default 1234); ignored in trace mode
-- --algorithm NAME — restrict the algorithm pool (repeatable)
-- --csv PATH — append the search log to a CSV file
+- `--seed S` — RNG seed (default 1234); ignored in trace mode
+- `--algorithm NAME` — restrict the algorithm pool (repeatable)
+- `--csv PATH` — append the search log to a CSV file
 
 
 ### Output
@@ -570,13 +555,7 @@ Optional:
 
 For every workload the tool prints the best configuration found, the
 simulated cost, the achieved hit rate, the Belady optimum for the same
-total capacity, and the relative gap. A summary table is printed at the
-end:
-
-
- workload algorithms levels hit_rate opt_rate sim_ns/op
- w1 LIRS/LIRS/LIRS 3 0.3417 0.3734 68.3 ph_4x LRU/LRU/LRU 3 0.2401 0.5483 78.6
- w2 LFU/LIRS/LIRS 3 0.5434 0.6848 52.8
+total capacity. A summary table is printed at the end.
 
 
 
@@ -724,12 +703,3 @@ Results:
 | meta_reag.oracleGeneral | 2Q/2Q | 2 | 0.6377 | 0.6919 | 4125093.2 | 65536 | 262144 |
 
 Almost all of positions are occupied by 2Q. The reason is that in 2-tier L0 is responsible for both "hot right now" and "hot in general" keys, and 2Q is the most suitable here. In 3-tier, those roles are divided between L0 and L1 accordingly, and they can be specialized better (LRU/LIRS).
-
-
-
-
-
-
-
-
-

@@ -140,16 +140,9 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
+
+
     
-    auto stndl = make_cache<int, int>(CacheAlgorithm::LIRS, 10);
-
-    for (int i = 0; i < 100; i++) stndl->access(i % 10, slow_get_page);
-
-    stndl->dump(std::cout);
-
-    stndl->clear();
-
-    stndl->dump(std::cout);
 
 
     CacheSystem<int, int> chs(slow_get_page);
