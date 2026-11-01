@@ -15,6 +15,7 @@ add_executable(cache_bench
     bench/workloads.cpp
     bench/runner.cpp
     bench/search.cpp
+    bench/trace_reader.cpp
 )
 target_include_directories(cache_bench PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_compile_options(cache_bench PRIVATE -O2)

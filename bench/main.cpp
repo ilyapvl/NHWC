@@ -2,6 +2,7 @@
 #include "runner.h"
 #include "search.h"
 #include "opt_cache.h"
+#include "trace_reader.h"
 
 #include <cctype>
 #include <charconv>
@@ -30,10 +31,14 @@ struct Options
     std::string csv_path;
     std::string workloads_path;
     std::vector<WorkloadSpec> workload_specs;
+
+    std::string trace_path;
+    std::size_t trace_max_records = 0;
+    std::vector<int> fixed_sequence;
 };
 
 
-const char* known_algorithms[] = {"LRU", "LFU", "LIRS", "ARC", "2Q"};
+const char* known_algorithms[] = {"ARC", "LIRS", "2Q", "LFU", "LRU"};
 
 
 bool is_valid_algorithm(const std::string& a)
@@ -94,7 +99,7 @@ bool parse_indexed_flag(const std::string& arg,
     }
 
     int idx = 0;
-    if (!parse_num(arg.substr(2), idx) || idx < 0 || idx > 63)
+    if (!parse_num(arg.substr(2), idx) || idx < 0 || idx > 7)
     {
         err = "bad index in " + arg;
         return false;
@@ -235,6 +240,30 @@ bool parse_args(int argc, char** argv, Options& o, std::string& err)
             o.workloads_path = val;
         }
 
+        else if (a == "--trace")
+        {
+            if (!next(val)) return false;
+            if (val.empty())
+            {
+                err = "--trace must be non-empty";
+                return false;
+            }
+            o.trace_path = val;
+        }
+
+        else if (a == "--trace-max-records")
+        {
+            if (!next(val)) return false;
+            long long v = 0;
+            if (!parse_num(val, v) || v < 0)
+            {
+                err = "--trace-max-records must be >= 0, got '" + val + "'";
+                return false;
+            }
+
+            o.trace_max_records = static_cast<std::size_t>(v);
+        }
+
         else if (a == "--algorithm")
         {
             if (!next(val)) return false;
@@ -253,9 +282,15 @@ bool parse_args(int argc, char** argv, Options& o, std::string& err)
         }
     }
 
-    if (o.workloads_path.empty())
+    if (!o.trace_path.empty() && !o.workloads_path.empty())
     {
-        err = "--workloads PATH is required";
+        err = "--workloads and --trace are mutually exclusive";
+        return false;
+    }
+
+    if (o.trace_path.empty() && o.workloads_path.empty())
+    {
+        err = "either --workloads PATH or --trace PATH is required";
         return false;
     }
 
@@ -332,14 +367,24 @@ bool search_for_workload(const Options& opts,
 
     s.algorithm_pool = opts.algorithm_names.empty() ? default_names(known_algorithms, std::size(known_algorithms)) : opts.algorithm_names;
 
-    Workload w = spec.workload;
-    w.n = opts.ops;
-
+    // trace
     std::vector<int> seq;
-    if (!generate(w, opts.seed, seq))
+
+    if (!opts.fixed_sequence.empty())
     {
-        err = "failed to generate workload '" + spec.name + "'";
-        return false;
+        seq = opts.fixed_sequence;
+    }
+
+    else
+    {
+        Workload w = spec.workload;
+        w.n = opts.ops;
+
+        if (!generate(w, opts.seed, seq))
+        {
+            err = "failed to generate workload '" + spec.name + "'";
+            return false;
+        }
     }
 
     std::size_t total_capacity = 0;
@@ -496,10 +541,39 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    if (!load_workload_specs(opts.workloads_path, opts.ops, opts.workload_specs, err))
+    if (!opts.trace_path.empty()) // trace
     {
-        std::cerr << "error: " << err << '\n';
-        return 1;
+        std::vector<int> trace_seq;
+        cache_bench::TraceInfo info;
+
+        if (!cache_bench::load_oracle_general(opts.trace_path, opts.trace_max_records, trace_seq, info, err))
+        {
+            std::cerr << "error: " << err << '\n';
+            return 1;
+        }
+
+        std::cerr << "[trace] loaded " << info.records
+                << " records, " << info.unique_keys
+                << " unique keys from " << opts.trace_path << '\n';
+
+        // in trace mode --ops is ovewritten by actual record count
+        opts.ops = trace_seq.size();
+        opts.fixed_sequence = std::move(trace_seq);
+
+        // pseudo spec for run_search()
+        WorkloadSpec pseudo;
+        pseudo.name = opts.trace_path + ": ";
+
+        opts.workload_specs.push_back(pseudo);
+    }
+
+    else // synthetic
+    {
+        if (!load_workload_specs(opts.workloads_path, opts.ops, opts.workload_specs, err))
+        {
+            std::cerr << "error: " << err << '\n';
+            return 1;
+        }
     }
 
     if (!run_search(opts, err))

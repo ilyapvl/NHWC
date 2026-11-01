@@ -85,11 +85,11 @@ SearchResult hill_climb(const Config& start,
         log.open(opts.log_csv, std::ios::app);
         if (log.tellp() == 0)
         {
-            log << "workload,iteration,config,objective,hit_rate\n";
+            log << "trace,iteration,config,objective,hit_rate\n";
         }
     }
 
-    const std::string wname = opts.workload_label.empty() ? workload_type_name(opts.workload) : opts.workload_label;
+    const std::string wname = opts.workload_label.empty() ? "trace" : opts.workload_label;
 
     SearchResult result;
     result.best = start;
