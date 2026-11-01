@@ -11,7 +11,7 @@ multi-level system that combines them
 The project provides five cache replacement policies: LRU, LFU, ARC, 2Q and LIRS.
 
 
-In addition, an `OptimalCache` implements Belady`s algorithm — it knows
+In addition, an `OptimalCache` implements Belady's algorithm — it knows
 the entire future sequence in advance and gives the theoretical upper bound on
 hit rate. It is not meant to be used inside a live cache system,only as a reference.
 
@@ -33,7 +33,7 @@ Every algorithm inherits from `Cache<K, V>` and
 
 ### Requirements
 
-- CMake 3.20 or newer
+- CMake 3.24 or newer
 - A C++20 compiler
 
 GoogleTest is fetched automatically via CMake's
@@ -45,6 +45,8 @@ GoogleTest is fetched automatically via CMake's
 
 ```
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cd build
+make
 ```
 
 
@@ -178,7 +180,7 @@ Keeps the entire request sequence in memory and, on each
 miss, evicts the resident whose next use is farthest in the future.
 `simulate()` walks the sequence once and returns the number of hits.
 
-**Note:** OptimalCache can`t be used in cache system
+**Note:** OptimalCache can't be used in cache system
 
 **Note:** `simulate()` mutates the internal state and therefore must be called only once
 

@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include <list>
 #include <vector>
-#include <optional>
-#include <cassert>
 #include <cstddef>
 #include <map>
 #include <set>
